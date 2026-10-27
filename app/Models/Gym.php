@@ -1,0 +1,276 @@
+<?php
+
+namespace App\Models;
+
+use Filament\Models\Contracts\HasAvatar;
+use Filament\Models\Contracts\HasCurrentTenantLabel;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
+{
+    use HasFactory, SoftDeletes;
+
+    public const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+    protected $guarded = ['id'];
+
+    protected $attributes = [
+        'status' => 'trial',
+        'primary_color' => '#f59e0b',
+        'currency' => 'INR',
+        'timezone' => 'Asia/Kolkata',
+        'invoice_prefix' => 'INV',
+        'member_code_prefix' => 'M',
+        'onboarding_completed' => false,
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'opening_hours' => 'array',
+            'settings' => 'array',
+            'integrations' => 'encrypted:array',
+            'trial_ends_at' => 'datetime',
+            'subscription_ends_at' => 'datetime',
+            'onboarding_completed' => 'boolean',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Gym $gym): void {
+            $gym->slug ??= static::uniqueSlug($gym->name);
+            $gym->trial_ends_at ??= now()->addDays((int) config('gym.trial_days'));
+            $gym->saas_plan_id ??= SaasPlan::query()->where('slug', config('gym.default_saas_plan'))->value('id');
+        });
+
+        static::created(function (Gym $gym): void {
+            $gym->branches()->create(['name' => 'Main branch', 'address' => $gym->address, 'phone' => $gym->phone]);
+        });
+    }
+
+    public static function uniqueSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'gym';
+        $slug = $base;
+        $i = 2;
+
+        while (static::withTrashed()->where('slug', $slug)->exists() || in_array($slug, config('gym.reserved_slugs'), true)) {
+            $slug = $base.'-'.$i++;
+        }
+
+        return $slug;
+    }
+
+    public function setting(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->settings, $key, $default ?? config("gym.defaults.$key"));
+    }
+
+    /** A gym's own credential, falling back to the platform-wide config value. */
+    public function integration(string $key, string $configKey): ?string
+    {
+        return data_get($this->integrations, $key) ?: config($configKey);
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->logo_url;
+    }
+
+    public function getCurrentTenantLabel(): string
+    {
+        return 'Current gym';
+    }
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
+    }
+
+    public function isGstRegistered(): bool
+    {
+        return filled($this->gstin);
+    }
+
+    // ---- SaaS subscription -------------------------------------------------
+
+    public function saasPlan(): BelongsTo
+    {
+        return $this->belongsTo(SaasPlan::class);
+    }
+
+    public function onTrial(): bool
+    {
+        return $this->status === 'trial' && $this->trial_ends_at?->isFuture();
+    }
+
+    public function hasActiveSaasSubscription(): bool
+    {
+        return match ($this->status) {
+            'trial' => (bool) $this->trial_ends_at?->isFuture(),
+            'active' => ! $this->subscription_ends_at || $this->subscription_ends_at->isFuture(),
+            default => false,
+        };
+    }
+
+    /** Whether the gym's SaaS plan allows one more members / branches / staff. */
+    public function withinLimit(string $resource): bool
+    {
+        $limit = $this->saasPlan?->{"max_$resource"};
+
+        if ($limit === null) {
+            return true;
+        }
+
+        $count = match ($resource) {
+            'members' => $this->members()->withoutGlobalScopes()->whereNull('deleted_at')->count(),
+            'branches' => $this->branches()->withoutGlobalScopes()->count(),
+            'staff' => $this->staffMemberships()->withoutGlobalScopes()->count(),
+        };
+
+        return $count < $limit;
+    }
+
+    // ---- Numbering ---------------------------------------------------------
+
+    public function takeNumber(string $counter): int
+    {
+        return DB::transaction(function () use ($counter): int {
+            $column = "next_{$counter}_number";
+            $current = (int) static::query()->whereKey($this->getKey())->lockForUpdate()->value($column);
+            static::query()->whereKey($this->getKey())->update([$column => $current + 1]);
+            $this->{$column} = $current + 1;
+
+            return $current;
+        });
+    }
+
+    public function nextInvoiceNumber(): string
+    {
+        return sprintf('%s-%s-%05d', $this->invoice_prefix, now()->format('y'), $this->takeNumber('invoice'));
+    }
+
+    public function nextReceiptNumber(): string
+    {
+        return sprintf('RCPT-%06d', $this->takeNumber('receipt'));
+    }
+
+    public function nextMemberCode(): string
+    {
+        return sprintf('%s%04d', $this->member_code_prefix, $this->takeNumber('member'));
+    }
+
+    // ---- Relations (also used by Filament tenancy) -------------------------
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)
+            ->using(GymUser::class)
+            ->withPivot(['id', 'role', 'branch_id', 'is_active'])
+            ->withTimestamps();
+    }
+
+    public function staffMemberships(): HasMany
+    {
+        return $this->hasMany(GymUser::class);
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(Branch::class);
+    }
+
+    public function members(): HasMany
+    {
+        return $this->hasMany(Member::class);
+    }
+
+    public function membershipPlans(): HasMany
+    {
+        return $this->hasMany(MembershipPlan::class);
+    }
+
+    public function coupons(): HasMany
+    {
+        return $this->hasMany(Coupon::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function cashClosings(): HasMany
+    {
+        return $this->hasMany(CashClosing::class);
+    }
+
+    public function measurements(): HasMany
+    {
+        return $this->hasMany(Measurement::class);
+    }
+
+    public function workoutPlans(): HasMany
+    {
+        return $this->hasMany(WorkoutPlan::class);
+    }
+
+    public function dietPlans(): HasMany
+    {
+        return $this->hasMany(DietPlan::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function staffAttendances(): HasMany
+    {
+        return $this->hasMany(StaffAttendance::class);
+    }
+
+    public function trainerRatings(): HasMany
+    {
+        return $this->hasMany(TrainerRating::class);
+    }
+
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class);
+    }
+
+    public function broadcasts(): HasMany
+    {
+        return $this->hasMany(Broadcast::class);
+    }
+
+    public function messageLogs(): HasMany
+    {
+        return $this->hasMany(MessageLog::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+}
