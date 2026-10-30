@@ -71,9 +71,9 @@ No Node or npm build is needed: Filament's assets are published by `composer ins
    ```
 5. **Prepare the app:**
    ```bash
-   php artisan migrate --seed --force
+   php artisan migrate --seed --force   # also creates the super admin admin@syberinfo.com.au (SUPER_ADMIN_* in .env)
    php artisan storage:link
-   php artisan gym:make-admin you@yourcompany.com   # creates your super admin login for /admin
+   php artisan gym:make-admin someone@yourcompany.com   # optional: add another super admin
    php artisan optimize
    ```
 6. **Cron.** In the site's **Cron Jobs** tab, add a job that runs every minute:

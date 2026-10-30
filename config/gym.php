@@ -10,6 +10,16 @@ return [
     'default_saas_plan' => env('GYM_DEFAULT_SAAS_PLAN', 'basic'),
 
     /*
+    | Platform owner, created as super admin by "php artisan db:seed".
+    | Leave the password empty to have a random one generated and printed.
+    */
+    'super_admin' => [
+        'email' => env('SUPER_ADMIN_EMAIL', 'admin@syberinfo.com.au'),
+        'name' => env('SUPER_ADMIN_NAME', 'Syber Info Admin'),
+        'password' => env('SUPER_ADMIN_PASSWORD'),
+    ],
+
+    /*
     | Set to e.g. "yourapp.com" to serve each gym on its own subdomain
     | (fitzone.yourapp.com). Leave empty to use paths (/app/fitzone).
     */

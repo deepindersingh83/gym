@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\BranchSwitchController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 // Public signup page for each gym.
 Route::get('/join/{gym:slug}', [JoinController::class, 'show'])->name('join.show');
