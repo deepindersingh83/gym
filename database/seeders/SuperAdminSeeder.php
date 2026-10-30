@@ -29,8 +29,16 @@ class SuperAdminSeeder extends Seeder
             $user->fill(['name' => config('gym.super_admin.name'), 'password' => $password]);
 
             if (! config('gym.super_admin.password')) {
-                $this->command?->warn("Super admin {$email} created with password: {$password}");
-                $this->command?->warn('Sign in at '.url('/admin').' and change it under your profile.');
+                $this->command?->newLine();
+                $this->command?->warn('  ┌──────────────────────────────────────────────────────────┐');
+                $this->command?->warn("    Super admin created: {$email}");
+                $this->command?->warn("    Password:            {$password}");
+                $this->command?->warn('    Copy it now — it is not shown again. Change it after');
+                $this->command?->warn('    signing in at '.url('/admin').' (top-right menu → Profile).');
+                $this->command?->warn('  └──────────────────────────────────────────────────────────┘');
+                $this->command?->newLine();
+            } else {
+                $this->command?->info("  Super admin created: {$email} (password from SUPER_ADMIN_PASSWORD)");
             }
         }
 

@@ -20,7 +20,8 @@ class SaasPlanSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
-            SaasPlan::query()->updateOrCreate(['slug' => $plan['slug']], $plan);
+            // Only create missing plans, so re-running never overwrites prices changed in /admin.
+            SaasPlan::query()->firstOrCreate(['slug' => $plan['slug']], $plan);
         }
     }
 }

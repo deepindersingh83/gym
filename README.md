@@ -48,34 +48,24 @@ No Node or npm build is needed: Filament's assets are published by `composer ins
 
 1. **Create the site.** In CloudPanel, go to **Sites → Add Site → Create a PHP Site**, choose the **Laravel** application template and **PHP 8.3 or newer**, and enter your domain. CloudPanel sets the web root to `public/`.
 2. **Create a database.** In the site's **Databases** tab, create a MySQL database and user.
-3. **Deploy the code** over SSH as the site user:
+3. **Run the auto installer** over SSH as the site user (not root):
    ```bash
+   su - <site-user>
    cd ~/htdocs/yourapp.com
-   git clone https://github.com/deepindersingh83/gym.git .
-   composer install --no-dev --optimize-autoloader
-   cp .env.example .env && php artisan key:generate
+   git clone -b claude/lucid-gauss-uhwvaf https://github.com/deepindersingh83/gym.git .
+   bash install.sh --php=/usr/bin/php8.3
    ```
-4. **Edit `.env`:**
-   ```dotenv
-   APP_NAME="GymFlow"
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://yourapp.com
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_DATABASE=...
-   DB_USERNAME=...
-   DB_PASSWORD=...
-   QUEUE_CONNECTION=database
-   MAIL_MAILER=smtp        # plus your SMTP details, used for email reminders and password resets
-   ```
-5. **Prepare the app:**
-   ```bash
-   php artisan migrate --seed --force   # also creates the super admin admin@syberinfo.com.au (SUPER_ADMIN_* in .env)
-   php artisan storage:link
-   php artisan gym:make-admin someone@yourcompany.com   # optional: add another super admin
-   php artisan optimize
-   ```
+   The installer:
+   - checks PHP, its extensions and Composer;
+   - creates `.env` and asks for your website address and the database from step 2;
+   - checks the database connection, and explains how to fix it if it fails;
+   - installs packages, generates the app key, creates the tables and software plans;
+   - creates the super admin **admin@syberinfo.com.au**. You type a password, or press Enter to have one generated and shown once;
+   - links storage, publishes assets, builds caches, and prints the exact cron and queue-worker lines for your server.
+
+   It is safe to run again: existing data, prices and passwords are never overwritten. Use `bash install.sh --yes` to skip the questions. To add another super admin: `php artisan gym:make-admin someone@yourcompany.com`.
+4. **Email.** Set `MAIL_MAILER=smtp` and your SMTP details in `.env` (used for email reminders, invites and password resets), then run `bash install.sh --yes`.
+5. **Run `php artisan gym:install` by hand** only if you set up packages yourself; it does the database and app steps of the installer.
 6. **Cron.** In the site's **Cron Jobs** tab, add a job that runs every minute:
    ```
    * * * * * /usr/bin/php8.3 /home/<site-user>/htdocs/yourapp.com/artisan schedule:run >> /dev/null 2>&1
@@ -103,10 +93,8 @@ No Node or npm build is needed: Filament's assets are published by `composer ins
 
 ```bash
 git pull
-composer install --no-dev -o
-php artisan migrate --force
-php artisan optimize
-supervisorctl restart gym-queue
+bash install.sh --yes --php=/usr/bin/php8.3
+supervisorctl restart gym-queue   # as root
 ```
 
 ## Integrations (per gym, under Gym settings → Integrations)

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\SaasPlan;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,5 +46,23 @@ class HomeAndSuperAdminTest extends TestCase
         $existing->refresh();
         $this->assertTrue($existing->is_super_admin);
         $this->assertTrue(Hash::check('original-pass', $existing->password));
+    }
+
+    public function test_install_command_sets_everything_up_and_can_be_rerun(): void
+    {
+        config(['gym.super_admin.password' => 'installer-pass']);
+
+        // The test database is already migrated, so both runs report an update.
+        $this->artisan('gym:install', ['--skip-cache' => true])
+            ->expectsOutputToContain('Database connection (sqlite)')
+            ->expectsOutputToContain('Super admin created: admin@syberinfo.com.au')
+            ->assertSuccessful();
+
+        $this->artisan('gym:install', ['--skip-cache' => true])
+            ->expectsOutputToContain('Update complete')
+            ->assertSuccessful();
+
+        $this->assertSame(1, User::query()->where('email', 'admin@syberinfo.com.au')->where('is_super_admin', true)->count());
+        $this->assertSame(3, SaasPlan::query()->count());
     }
 }
