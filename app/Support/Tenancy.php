@@ -72,7 +72,15 @@ class Tenancy
 
     public static function role(): ?StaffRole
     {
-        return static::membership()?->role;
+        // The platform super admin can open any gym to help it, with owner rights.
+        return static::membership()?->role ?? (static::isSuperAdmin() ? StaffRole::Owner : null);
+    }
+
+    protected static function isSuperAdmin(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof User && $user->is_super_admin && static::gym() !== null;
     }
 
     /**
@@ -84,11 +92,11 @@ class Tenancy
     {
         $membership = static::membership();
 
-        if (! $membership) {
+        if (! $membership && ! static::isSuperAdmin()) {
             return null;
         }
 
-        if (! $membership->role->seesAllBranches() && $membership->branch_id) {
+        if ($membership && ! $membership->role->seesAllBranches() && $membership->branch_id) {
             return $membership->branch_id;
         }
 
@@ -106,7 +114,11 @@ class Tenancy
     {
         $membership = static::membership();
 
-        return $membership !== null && ($membership->role->seesAllBranches() || ! $membership->branch_id);
+        if (! $membership) {
+            return static::isSuperAdmin();
+        }
+
+        return $membership->role->seesAllBranches() || ! $membership->branch_id;
     }
 
     protected static function branchSessionKey(): string

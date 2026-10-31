@@ -73,11 +73,15 @@ class User extends Authenticatable implements FilamentUser, HasTenants
 
     public function getTenants(Panel $panel): Collection
     {
-        return $this->gyms()->wherePivot('is_active', true)->get();
+        // The super admin can switch into any gym to help it.
+        return $this->is_super_admin
+            ? Gym::query()->orderBy('name')->get()
+            : $this->gyms()->wherePivot('is_active', true)->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
     {
-        return $this->gyms()->whereKey($tenant->getKey())->wherePivot('is_active', true)->exists();
+        return $this->is_super_admin
+            || $this->gyms()->whereKey($tenant->getKey())->wherePivot('is_active', true)->exists();
     }
 }

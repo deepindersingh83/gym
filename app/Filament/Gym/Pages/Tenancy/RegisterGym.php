@@ -2,11 +2,10 @@
 
 namespace App\Filament\Gym\Pages\Tenancy;
 
-use App\Enums\MessageEvent;
 use App\Enums\PlanType;
-use App\Enums\StaffRole;
 use App\Filament\Gym\Schemas\GymDetailsFields;
 use App\Models\Gym;
+use App\Services\GymProvisioner;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Components\Wizard;
@@ -56,29 +55,10 @@ class RegisterGym extends RegisterTenant
 
     protected function handleRegistration(array $data): Model
     {
-        $gym = Gym::create([...$data, 'status' => 'trial', 'onboarding_completed' => true]);
-
-        $gym->users()->attach(auth()->id(), ['role' => StaffRole::Owner->value, 'joined_on' => today()]);
-
-        $prices = [PlanType::Monthly->value => 1000, PlanType::Quarterly->value => 2700, PlanType::HalfYearly->value => 5000, PlanType::Yearly->value => 9000];
-
-        foreach ($this->form->getRawState()['starter_plans'] ?? [] as $type) {
-            $planType = PlanType::from($type);
-            [$value, $unit] = $planType->defaults();
-            $gym->membershipPlans()->create([
-                'name' => str($planType->getLabel())->before(' ('),
-                'type' => $planType,
-                'duration_value' => $value,
-                'duration_unit' => $unit,
-                'price' => $prices[$type],
-                'gst_rate' => 18,
-            ]);
-        }
-
-        foreach ([MessageEvent::RenewalReminder, MessageEvent::Expired, MessageEvent::DuesReminder, MessageEvent::Birthday] as $event) {
-            $gym->messageTemplates()->create(['event' => $event, 'channel' => 'whatsapp', 'body' => $event->defaultBody()]);
-        }
-
-        return $gym;
+        return app(GymProvisioner::class)->provision(
+            $data,
+            auth()->user(),
+            $this->form->getRawState()['starter_plans'] ?? [],
+        );
     }
 }
