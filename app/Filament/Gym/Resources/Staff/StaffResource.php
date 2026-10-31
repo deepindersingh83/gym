@@ -13,7 +13,9 @@ use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
@@ -78,6 +80,18 @@ class StaffResource extends Resource
             TimePicker::make('shift_start')->seconds(false),
             TimePicker::make('shift_end')->seconds(false),
             Toggle::make('is_active')->label('Can sign in')->default(true)->inline(false),
+            Section::make('Website profile')
+                ->description('Shown on the gym website when "Show on website" is on.')
+                ->columns(2)
+                ->columnSpanFull()
+                ->collapsed(fn (?GymUser $record) => ! $record?->show_on_website)
+                ->schema([
+                    Toggle::make('show_on_website')->label('Show on website')->columnSpanFull(),
+                    FileUpload::make('photo_path')->label('Photo')->image()->avatar()->disk('public')
+                        ->directory(fn () => 'staff/'.Tenancy::gymId())->visibility('public')->maxSize(4096),
+                    TextInput::make('specialities')->placeholder('e.g. Strength, fat loss, mobility')->maxLength(150),
+                    Textarea::make('bio')->rows(3)->maxLength(800)->columnSpanFull(),
+                ]),
         ]);
     }
 
@@ -126,7 +140,7 @@ class StaffResource extends Resource
 
         return GymUser::query()->updateOrCreate(
             ['gym_id' => Tenancy::gymId(), 'user_id' => $user->id],
-            collect($data)->only(['role', 'branch_id', 'designation', 'joined_on', 'shift_start', 'shift_end', 'is_active'])->all(),
+            collect($data)->only(['role', 'branch_id', 'designation', 'joined_on', 'shift_start', 'shift_end', 'is_active', 'show_on_website', 'photo_path', 'specialities', 'bio'])->all(),
         );
     }
 

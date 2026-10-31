@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /app
+Disallow: /admin
+Disallow: /member
+Disallow: /partner
+Disallow: /invoices
+Disallow: /receipts
+# Sitemap of every gym website: /sitemap.xml (submit it in Google Search Console)

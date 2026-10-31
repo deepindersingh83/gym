@@ -7,8 +7,10 @@ use App\Filament\Gym\Schemas\GymDetailsFields;
 use App\Support\Access;
 use App\Support\Height;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\TagsInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Pages\Tenancy\EditTenantProfile;
@@ -48,6 +50,29 @@ class EditGymProfile extends EditTenantProfile
                         ]),
                 ]),
                 Tab::make('Opening hours')->schema(GymDetailsFields::openingHours()),
+                Tab::make('Website')->schema([
+                    Section::make('Your gym website')
+                        ->description(fn () => 'Live at '.$gym->websiteUrl())
+                        ->columns(2)
+                        ->schema([
+                            Toggle::make('website.enabled')->label('Website is public')->default(true)->columnSpanFull(),
+                            TextInput::make('website.tagline')->label('Headline')->placeholder('e.g. Pune\'s friendliest strength gym')->maxLength(90),
+                            TextInput::make('website.seo_description')->label('Search engine description')->maxLength(160)
+                                ->helperText('Shown by Google under your gym\'s name. Up to 160 characters.'),
+                            Textarea::make('website.about')->label('About the gym')->rows(5)->maxLength(3000)->columnSpanFull(),
+                            FileUpload::make('website.cover')->label('Cover photo')->image()->disk('public')
+                                ->directory(fn () => 'websites/'.$gym->id)->visibility('public')->maxSize(4096)->imageEditor(),
+                            FileUpload::make('website.gallery')->label('Gallery (up to 12 photos)')->image()->multiple()->reorderable()
+                                ->maxFiles(12)->disk('public')->directory(fn () => 'websites/'.$gym->id)->visibility('public')->maxSize(4096),
+                            Toggle::make('website.show_trainers')->label('Show trainers')->default(true)
+                                ->helperText('Choose which trainers appear under Staff → edit → Show on website.'),
+                            Toggle::make('website.show_plans')->label('Show membership plans and prices')->default(true),
+                            TextInput::make('website.map_url')->label('Google Maps link')->url()->placeholder('https://maps.app.goo.gl/...'),
+                            TextInput::make('website.instagram')->label('Instagram link')->url(),
+                            TextInput::make('website.facebook')->label('Facebook link')->url(),
+                            TextInput::make('website.youtube')->label('YouTube link')->url(),
+                        ]),
+                ]),
                 Tab::make('Units')->schema([
                     Radio::make('settings.height_unit')
                         ->label('Show and enter member height in')
@@ -116,6 +141,7 @@ class EditGymProfile extends EditTenantProfile
     {
         $data['settings'] = [...($this->tenant->settings ?? []), ...($data['settings'] ?? [])];
         $data['settings']['reminder_days_before'] = array_values(array_unique(array_map('intval', $data['settings']['reminder_days_before'] ?? [])));
+        $data['website'] = [...($this->tenant->website ?? []), ...($data['website'] ?? [])];
         $data['integrations'] = array_filter([...($this->tenant->integrations ?? []), ...($data['integrations'] ?? [])], fn ($v) => filled($v));
 
         return $data;

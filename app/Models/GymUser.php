@@ -25,6 +25,7 @@ class GymUser extends Pivot
             'role' => StaffRole::class,
             'is_active' => 'boolean',
             'joined_on' => 'date',
+            'show_on_website' => 'boolean',
         ];
     }
 

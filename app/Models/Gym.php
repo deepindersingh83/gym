@@ -38,6 +38,10 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
             'opening_hours' => 'array',
             'settings' => 'array',
             'integrations' => 'encrypted:array',
+            'website' => 'array',
+            'custom_domain_verified_at' => 'datetime',
+            'last_activity_at' => 'datetime',
+            'message_credits' => 'integer',
             'trial_ends_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
             'onboarding_completed' => 'boolean',
@@ -79,6 +83,24 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
     public function integration(string $key, string $configKey): ?string
     {
         return data_get($this->integrations, $key) ?: config($configKey);
+    }
+
+    /** Public website address: the gym's own domain once it is live, otherwise on the platform. */
+    public function websiteUrl(): string
+    {
+        return $this->hasActiveCustomDomain()
+            ? 'https://'.$this->custom_domain
+            : route('website.show', $this);
+    }
+
+    public function hasActiveCustomDomain(): bool
+    {
+        return filled($this->custom_domain) && $this->custom_domain_status === 'active';
+    }
+
+    public function websiteSetting(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->website, $key, $default);
     }
 
     public function getFilamentAvatarUrl(): ?string
@@ -267,6 +289,26 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
     public function messageLogs(): HasMany
     {
         return $this->hasMany(MessageLog::class);
+    }
+
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class);
+    }
+
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class);
+    }
+
+    public function saasPayments(): HasMany
+    {
+        return $this->hasMany(SaasPayment::class);
+    }
+
+    public function creditTransactions(): HasMany
+    {
+        return $this->hasMany(CreditTransaction::class);
     }
 
     public function activities(): HasMany

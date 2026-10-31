@@ -56,7 +56,18 @@ class DemoSeeder extends Seeder
 
         $gym->users()->attach($owner->id, ['role' => StaffRole::Owner->value]);
         $gym->users()->attach($reception->id, ['role' => StaffRole::Receptionist->value, 'branch_id' => $main->id]);
-        $gym->users()->attach($trainer->id, ['role' => StaffRole::Trainer->value, 'branch_id' => $main->id]);
+        $gym->users()->attach($trainer->id, [
+            'role' => StaffRole::Trainer->value, 'branch_id' => $main->id, 'designation' => 'Head coach',
+            'show_on_website' => true, 'specialities' => 'Strength, fat loss, mobility',
+            'bio' => '10 years of coaching beginners and athletes. Certified strength and conditioning coach.',
+        ]);
+        $gym->update(['website' => [
+            'enabled' => true,
+            'tagline' => 'Pune\'s friendliest strength & fitness gym',
+            'about' => "FitZone is a 6,000 sq ft gym in the heart of Pune with free weights, cardio, a functional training zone and certified coaches.\n\nWhether it is your first day in a gym or you are chasing a personal best, we will help you get there.",
+            'show_trainers' => true,
+            'show_plans' => true,
+        ]]);
 
         Tenancy::forGym($gym, function (Gym $gym) use ($main, $second, $trainer, $owner) {
             auth()->setUser($owner);

@@ -28,6 +28,7 @@ class Access
         $all = [self::O, self::M, self::R, self::T];
 
         return [
+            'leads' => ['view' => $omr, 'create' => $omr, 'edit' => $omr, 'delete' => $om],
             'members' => ['view' => $all, 'create' => $omr, 'edit' => $omr, 'delete' => $om],
             'subscriptions' => ['view' => $omr, 'create' => $omr, 'edit' => $om, 'delete' => $o],
             'payments' => ['view' => $omr, 'create' => $omr, 'edit' => $om, 'delete' => $o],
