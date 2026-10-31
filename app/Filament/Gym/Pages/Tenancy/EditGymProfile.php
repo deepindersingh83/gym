@@ -106,6 +106,19 @@ class EditGymProfile extends EditTenantProfile
                         Toggle::make('settings.send_payment_receipts')->label('Payment receipts')->default(true),
                     ]),
                 ]),
+                Tab::make('Google reviews')->schema([
+                    Toggle::make('settings.review_request_enabled')->label('Ask happy members for a Google review')->live(),
+                    TextInput::make('settings.google_review_url')
+                        ->label('Your Google review link')
+                        ->url()
+                        ->placeholder('https://g.page/r/.../review')
+                        ->helperText('In Google Business Profile, choose "Ask for reviews" and copy the link.')
+                        ->required(fn ($get) => (bool) $get('settings.review_request_enabled')),
+                    TextInput::make('settings.review_request_after_visits')
+                        ->label('Send after this many check-ins')
+                        ->numeric()->minValue(2)->maxValue(200)->default(10)
+                        ->helperText('Sent once per member, through your reminder channels. Edit the text under Messaging → Message templates.'),
+                ]),
                 Tab::make('Integrations')->schema([
                     Section::make('Razorpay (online payments and UPI AutoPay)')
                         ->description(fn () => 'Webhook URL: '.route('webhooks.razorpay', $gym).' — events: payment_link.paid, subscription.charged')

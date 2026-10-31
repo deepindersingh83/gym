@@ -131,6 +131,7 @@ class Messenger
             'end_date' => $subscription?->end_date?->format('d M Y') ?? '',
             'days_left' => (string) ($subscription?->days_left ?? ''),
             'due' => number_format($subscription?->balance_due ?? $member->balance_due, 2),
+            'review_link' => (string) $gym->setting('google_review_url'),
         ];
     }
 

@@ -38,6 +38,9 @@ return [
         'send_payment_receipts' => true,
         'allow_online_signup' => true,
         'height_unit' => 'cm', // cm, or ft for feet and inches
+        'review_request_enabled' => false,
+        'review_request_after_visits' => 10,
+        'google_review_url' => null,
     ],
 
     'whatsapp' => [

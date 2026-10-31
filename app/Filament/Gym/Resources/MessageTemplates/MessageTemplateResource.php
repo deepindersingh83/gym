@@ -40,7 +40,7 @@ class MessageTemplateResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    public const PLACEHOLDERS = '{name}, {gym}, {plan}, {end_date}, {days_left}, {due}, {amount}, {receipt}, {currency}, {member_code}, {phone}';
+    public const PLACEHOLDERS = '{name}, {gym}, {plan}, {end_date}, {days_left}, {due}, {amount}, {receipt}, {currency}, {member_code}, {phone}, {review_link}, {visits}';
 
     protected static function accessArea(): string
     {

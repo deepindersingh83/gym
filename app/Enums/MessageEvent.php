@@ -12,6 +12,7 @@ enum MessageEvent: string implements HasLabel
     case Birthday = 'birthday';
     case Anniversary = 'anniversary';
     case PaymentReceived = 'payment_received';
+    case ReviewRequest = 'review_request';
     case Broadcast = 'broadcast';
 
     public function getLabel(): string
@@ -23,6 +24,7 @@ enum MessageEvent: string implements HasLabel
             self::Birthday => 'Birthday wish',
             self::Anniversary => 'Anniversary wish',
             self::PaymentReceived => 'Payment received',
+            self::ReviewRequest => 'Google review request',
             self::Broadcast => 'Broadcast',
         };
     }
@@ -37,6 +39,7 @@ enum MessageEvent: string implements HasLabel
             self::Birthday => 'Happy birthday {name}! Wishing you a strong and healthy year ahead. - Team {gym}',
             self::Anniversary => 'Happy anniversary {name}! Best wishes from all of us at {gym}.',
             self::PaymentReceived => 'Hi {name}, we received {currency}{amount} at {gym}. Receipt: {receipt}. Thank you!',
+            self::ReviewRequest => 'Hi {name}, you have completed {visits} workouts at {gym} — amazing! 💪 Would you take 30 seconds to rate us on Google? It really helps: {review_link}',
             self::Broadcast => '{message}',
         };
     }
