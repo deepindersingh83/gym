@@ -8,7 +8,8 @@
 # Options:
 #   --yes          Do not ask questions (CI / re-runs after git pull)
 #   --dev          Keep APP_ENV=local and APP_DEBUG=true, install dev packages
-#   --allow-root   Run even when started as root (not recommended on CloudPanel)
+#   --allow-root   Run as root without switching user (never on CloudPanel: the site
+#                  runs as the site user and could not read root-owned files)
 #   --php=PATH     PHP binary to use, e.g. --php=/usr/bin/php8.3
 #
 # Run it as the CloudPanel *site user* from the project folder:
@@ -33,7 +34,7 @@ for arg in "$@"; do
         --dev) DEV=1 ;;
         --allow-root) ALLOW_ROOT=1 ;;
         --php=*) PHP_BIN="${arg#--php=}" ;;
-        -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "Unknown option: $arg (see --help)"; exit 1 ;;
     esac
 done
@@ -116,11 +117,19 @@ echo "${B}GymFlow installer${N}  ·  ${APP_DIR}"
 step "Checking the server"
 
 if [[ $EUID -eq 0 && $ALLOW_ROOT -eq 0 ]]; then
+    # CloudPanel sites live in /home/<site-user>/htdocs/<domain> and PHP runs as that
+    # user. Started as root, give every file to the site user and continue as them.
+    if [[ "$APP_DIR" =~ ^/home/([^/]+)/htdocs/ ]] && id "${BASH_REMATCH[1]}" >/dev/null 2>&1; then
+        SITE_OWNER="${BASH_REMATCH[1]}"
+        echo "    ${Y}!${N} Started as root: giving all files to ${SITE_OWNER} and continuing as ${SITE_OWNER}."
+        chown -R "${SITE_OWNER}:${SITE_OWNER}" "$APP_DIR"
+        trap - ERR
+        exec su -s /bin/bash "$SITE_OWNER" -c "cd $(printf '%q' "$APP_DIR") && bash install.sh $(printf '%q ' "$@")"
+    fi
     owner="$(stat -c '%U' "$APP_DIR")"
     fail "Do not run this as root — files would become owned by root and the site would break.
    Run it as the site user instead:
-       su - ${owner} -c 'cd ${APP_DIR} && bash install.sh'
-   (or add --allow-root if you really mean it)"
+       su - ${owner} -c 'cd ${APP_DIR} && bash install.sh'"
 fi
 
 command -v "$PHP_BIN" >/dev/null 2>&1 || fail "PHP not found ('$PHP_BIN'). Use --php=/usr/bin/php8.3"
@@ -186,12 +195,25 @@ else
     ok ".env found (existing values are kept)"
 fi
 
-# Website address
+# Website address. CloudPanel names the site folder after the domain, so use it
+# when .env still has the placeholder.
 current_url="$(env_get APP_URL)"
-if [[ -z "$current_url" || "$current_url" == "http://localhost"* ]] && [[ $INTERACTIVE -eq 1 && $DEV -eq 0 ]]; then
-    ask APP_URL_VALUE "Website address (e.g. https://gym.example.com)" "${current_url:-https://}"
-    env_set APP_URL "${APP_URL_VALUE%/}"
+if [[ $DEV -eq 0 && ( -z "$current_url" || "$current_url" == "http://localhost"* ) ]]; then
+    guessed_url="https://"
+    folder="$(basename "$APP_DIR")"
+    [[ "$folder" == *.* ]] && guessed_url="https://${folder}"
+    if [[ $INTERACTIVE -eq 1 ]]; then
+        ask APP_URL_VALUE "Website address" "$guessed_url"
+    else
+        APP_URL_VALUE="$guessed_url"
+    fi
+    if [[ "$APP_URL_VALUE" == "https://" || -z "$APP_URL_VALUE" ]]; then
+        warn "APP_URL is still ${current_url:-empty}. Set it in .env to your site address, e.g. https://gym.example.com"
+    else
+        env_set APP_URL "${APP_URL_VALUE%/}"
+    fi
 fi
+ok "Website: $(env_get APP_URL)"
 
 # Environment
 if [[ $DEV -eq 1 ]]; then
