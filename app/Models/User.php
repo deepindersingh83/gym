@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -47,6 +48,11 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             ->withTimestamps();
     }
 
+    public function partner(): HasOne
+    {
+        return $this->hasOne(Partner::class);
+    }
+
     /** Member profiles linked to this login (one per gym the person trains at). */
     public function memberProfiles(): HasMany
     {
@@ -67,6 +73,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             // owner without a gym yet is sent to the "register your gym" wizard.
             'gym' => $this->gyms()->wherePivot('is_active', true)->exists() || ! $this->memberProfiles()->exists(),
             'member' => $this->memberProfiles()->exists(),
+            'partner' => $this->partner()->where('is_active', true)->exists(),
             default => false,
         };
     }

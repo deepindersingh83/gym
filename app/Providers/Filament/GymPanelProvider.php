@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Gym\Pages\Tenancy\EditGymProfile;
 use App\Filament\Gym\Pages\Tenancy\RegisterGym;
 use App\Http\Middleware\ApplyGymContext;
+use App\Http\Middleware\CaptureReferral;
 use App\Models\Gym;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
@@ -71,6 +72,7 @@ class GymPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                CaptureReferral::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

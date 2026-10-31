@@ -460,6 +460,7 @@
                 <a href="{{ $staffLogin }}">Gym staff login</a>
                 <a href="{{ $memberLogin }}">Member login</a>
                 <a href="{{ $register }}">Create a gym</a>
+                <a href="{{ route('filament.partner.auth.login') }}">Partner login</a>
             </nav>
         </div>
     </footer>

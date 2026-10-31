@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CaptureReferral;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // CloudPanel runs Nginx (and optionally Cloudflare) in front of PHP-FPM.
         $middleware->trustProxies(at: '*');
+
+        // Partner referral links (?ref=CODE) on public pages.
+        $middleware->appendToGroup('web', CaptureReferral::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

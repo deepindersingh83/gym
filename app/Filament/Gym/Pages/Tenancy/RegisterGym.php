@@ -4,6 +4,7 @@ namespace App\Filament\Gym\Pages\Tenancy;
 
 use App\Enums\PlanType;
 use App\Filament\Gym\Schemas\GymDetailsFields;
+use App\Http\Middleware\CaptureReferral;
 use App\Models\Gym;
 use App\Services\GymProvisioner;
 use Filament\Forms\Components\CheckboxList;
@@ -56,7 +57,7 @@ class RegisterGym extends RegisterTenant
     protected function handleRegistration(array $data): Model
     {
         return app(GymProvisioner::class)->provision(
-            $data,
+            [...$data, 'partner_id' => CaptureReferral::partnerId(request())],
             auth()->user(),
             $this->form->getRawState()['starter_plans'] ?? [],
         );

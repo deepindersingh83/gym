@@ -84,6 +84,8 @@ class GymResource extends Resource
                 Select::make('status')->options(self::STATUSES)->required()->default('trial'),
                 DateTimePicker::make('trial_ends_at')->default(fn () => now()->addDays((int) config('gym.trial_days'))),
                 DateTimePicker::make('subscription_ends_at')->label('Paid until')->helperText('Empty = no end date.'),
+                Select::make('partner_id')->label('Referred by partner')->relationship('partner', 'name')->searchable()->preload()
+                    ->helperText('Earns this partner a commission on the gym\'s software payments.')->columnSpan(2),
             ]),
             Section::make('Starter setup')
                 ->visibleOn('create')
@@ -159,8 +161,15 @@ class GymResource extends Resource
                         ->label('Record payment')
                         ->icon(Heroicon::OutlinedBanknotes)
                         ->schema([
-                            Select::make('saas_plan_id')->label('Plan')->options(fn () => SaasPlan::query()->pluck('name', 'id'))->default(fn (Gym $record) => $record->saas_plan_id)->required(),
-                            Select::make('months')->options([1 => '1 month', 3 => '3 months', 6 => '6 months', 12 => '12 months'])->default(12)->required(),
+                            Select::make('saas_plan_id')->label('Plan')->options(fn () => SaasPlan::query()->pluck('name', 'id'))
+                                ->default(fn (Gym $record) => $record->saas_plan_id)->required()->live()
+                                ->afterStateUpdated(fn ($state, $get, $set) => $set('amount', static::suggestedAmount($state, $get('months')))),
+                            Select::make('months')->options([1 => '1 month', 3 => '3 months', 6 => '6 months', 12 => '12 months'])
+                                ->default(12)->required()->live()
+                                ->afterStateUpdated(fn ($state, $get, $set) => $set('amount', static::suggestedAmount($get('saas_plan_id'), $state))),
+                            TextInput::make('amount')->label('Amount received')->prefix('₹')->numeric()->minValue(0)->required()
+                                ->default(fn (Gym $record) => static::suggestedAmount($record->saas_plan_id, 12)),
+                            TextInput::make('reference')->label('Payment reference')->maxLength(100),
                         ])
                         ->action(function (Gym $record, array $data) {
                             $from = $record->status === 'active' && $record->subscription_ends_at?->isFuture() ? $record->subscription_ends_at : now();
@@ -169,7 +178,19 @@ class GymResource extends Resource
                                 'status' => 'active',
                                 'subscription_ends_at' => $from->copy()->addMonthsNoOverflow((int) $data['months']),
                             ]);
-                            Notification::make()->title('Active until '.$record->subscription_ends_at->format('d M Y'))->success()->send();
+                            $payment = $record->saasPayments()->create([
+                                'saas_plan_id' => $data['saas_plan_id'],
+                                'recorded_by' => auth()->id(),
+                                'kind' => 'subscription',
+                                'amount' => $data['amount'],
+                                'months' => $data['months'],
+                                'reference' => $data['reference'] ?? null,
+                                'paid_at' => now(),
+                            ]);
+                            Notification::make()
+                                ->title('Active until '.$record->subscription_ends_at->format('d M Y'))
+                                ->body($payment->commission ? 'Partner commission: ₹'.number_format((float) $payment->commission->amount, 2) : null)
+                                ->success()->send();
                         }),
                     Action::make('ownerPassword')
                         ->label('Set owner password')
@@ -191,6 +212,20 @@ class GymResource extends Resource
                     EditAction::make(),
                 ]),
             ]);
+    }
+
+    /** Plan price for the period: the yearly price for 12 months, otherwise monthly × months. */
+    public static function suggestedAmount(mixed $planId, mixed $months): ?float
+    {
+        $plan = $planId ? SaasPlan::query()->find($planId) : null;
+
+        if (! $plan) {
+            return null;
+        }
+
+        return (int) $months === 12 && (float) $plan->yearly_price > 0
+            ? (float) $plan->yearly_price
+            : round((float) $plan->monthly_price * max(1, (int) $months), 2);
     }
 
     public static function getPages(): array
