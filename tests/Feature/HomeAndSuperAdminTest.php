@@ -54,7 +54,7 @@ class HomeAndSuperAdminTest extends TestCase
 
         // The test database is already migrated, so both runs report an update.
         $this->artisan('gym:install', ['--skip-cache' => true])
-            ->expectsOutputToContain('Database connection (sqlite)')
+            ->expectsOutputToContain('Database connection ('.config('database.default').')')
             ->expectsOutputToContain('Super admin created: admin@syberinfo.com.au')
             ->assertSuccessful();
 
