@@ -5,7 +5,9 @@ namespace App\Filament\Gym\Pages\Tenancy;
 use App\Enums\MessageChannel;
 use App\Filament\Gym\Schemas\GymDetailsFields;
 use App\Support\Access;
+use App\Support\Height;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -46,6 +48,13 @@ class EditGymProfile extends EditTenantProfile
                         ]),
                 ]),
                 Tab::make('Opening hours')->schema(GymDetailsFields::openingHours()),
+                Tab::make('Units')->schema([
+                    Radio::make('settings.height_unit')
+                        ->label('Show and enter member height in')
+                        ->options(Height::UNITS)
+                        ->default('cm')
+                        ->helperText('Heights are saved in centimetres, so switching later keeps every member\'s data and BMI correct.'),
+                ]),
                 Tab::make('Invoices')->schema([
                     Grid::make(3)->schema([
                         TextInput::make('invoice_prefix')->required()->maxLength(10),

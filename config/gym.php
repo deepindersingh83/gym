@@ -37,6 +37,7 @@ return [
         'send_anniversary_wishes' => true,
         'send_payment_receipts' => true,
         'allow_online_signup' => true,
+        'height_unit' => 'cm', // cm, or ft for feet and inches
     ],
 
     'whatsapp' => [

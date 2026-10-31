@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\User;
 use App\Services\Payments\RazorpayService;
+use App\Support\Height;
 use App\Support\Tenancy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class JoinController extends Controller
             'canPayOnline' => RazorpayService::for($gym)->isConfigured(),
             'healthQuestions' => MemberResource::HEALTH_QUESTIONS,
             'goals' => MemberResource::GOALS,
+            'heightInFeet' => Height::usesFeet($gym),
         ]);
     }
 
@@ -49,6 +51,8 @@ class JoinController extends Controller
             'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'height_cm' => ['nullable', 'numeric', 'between:50,250'],
+            'height_feet' => ['nullable', 'integer', 'between:1,8'],
+            'height_inches' => ['nullable', 'numeric', 'between:0,11.9'],
             'weight_kg' => ['nullable', 'numeric', 'between:10,400'],
             'goal' => ['nullable', Rule::in(array_keys(MemberResource::GOALS))],
             'emergency_contact_name' => ['nullable', 'string', 'max:120'],
@@ -60,6 +64,12 @@ class JoinController extends Controller
             'plan_id' => ['nullable', Rule::exists('membership_plans', 'id')->where('gym_id', $gym->id)->where('is_active', true)],
             'consent' => ['accepted'],
         ], ['phone.unique' => 'This phone number is already registered with the gym. Please contact the front desk.']);
+
+        // Gyms that measure in feet send feet and inches; store centimetres.
+        if (filled($data['height_feet'] ?? null) || filled($data['height_inches'] ?? null)) {
+            $data['height_cm'] = Height::fromFeet($data['height_feet'] ?? 0, $data['height_inches'] ?? 0);
+        }
+        unset($data['height_feet'], $data['height_inches']);
 
         $existing = User::query()->where('email', strtolower($data['email']))->first();
 

@@ -4,6 +4,7 @@ namespace App\Filament\Gym\Resources\Measurements;
 
 use App\Filament\Gym\Concerns\ChecksGymAccess;
 use App\Filament\Gym\Resources\Measurements\Pages\ManageMeasurements;
+use App\Filament\Gym\Support\HeightField;
 use App\Models\Measurement;
 use App\Models\Member;
 use BackedEnum;
@@ -56,8 +57,7 @@ class MeasurementResource extends Resource
                 ->columnSpan(2)->visible($withMember),
             DatePicker::make('recorded_on')->default(today())->maxDate(today())->required()->columnSpan($withMember ? 2 : 1),
             TextInput::make('weight_kg')->label('Weight')->numeric()->minValue(10)->maxValue(400)->suffix('kg')->required(),
-            TextInput::make('height_cm')->label('Height')->numeric()->minValue(50)->maxValue(250)->suffix('cm')
-                ->helperText('Leave empty to use the last recorded height.'),
+            HeightField::make(helperText: 'Leave empty to use the last recorded height.'),
             TextInput::make('body_fat_pct')->label('Body fat')->numeric()->minValue(1)->maxValue(70)->suffix('%'),
             $cm('chest_cm', 'Chest'),
             $cm('waist_cm', 'Waist'),

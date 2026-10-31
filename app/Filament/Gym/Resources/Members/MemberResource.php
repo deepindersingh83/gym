@@ -12,8 +12,10 @@ use App\Filament\Gym\Resources\Members\RelationManagers\AttendancesRelationManag
 use App\Filament\Gym\Resources\Members\RelationManagers\MeasurementsRelationManager;
 use App\Filament\Gym\Resources\Members\RelationManagers\PaymentsRelationManager;
 use App\Filament\Gym\Resources\Members\RelationManagers\SubscriptionsRelationManager;
+use App\Filament\Gym\Support\HeightField;
 use App\Models\Member;
 use App\Support\GymOptions;
+use App\Support\Height;
 use App\Support\Money;
 use App\Support\Tenancy;
 use BackedEnum;
@@ -119,7 +121,7 @@ class MemberResource extends Resource
                 Textarea::make('address')->rows(2)->columnSpanFull(),
             ]),
             Section::make('Body and goals')->columns(4)->schema([
-                TextInput::make('height_cm')->label('Height (cm)')->numeric()->minValue(50)->maxValue(250),
+                HeightField::make(),
                 TextInput::make('weight_kg')->label('Weight (kg)')->numeric()->minValue(10)->maxValue(400)
                     ->helperText('Updated automatically from measurements.'),
                 Select::make('goal')->options(self::GOALS),
@@ -178,7 +180,7 @@ class MemberResource extends Resource
                 TextEntry::make('gender')->placeholder('—')->formatStateUsing(fn ($state) => ucfirst((string) $state)),
                 TextEntry::make('date_of_birth')->date('d M Y')->placeholder('—'),
                 TextEntry::make('anniversary_date')->date('d M Y')->placeholder('—'),
-                TextEntry::make('height_cm')->label('Height')->suffix(' cm')->placeholder('—'),
+                TextEntry::make('height_cm')->label('Height')->formatStateUsing(fn ($state) => Height::format($state))->placeholder('—'),
                 TextEntry::make('weight_kg')->label('Weight')->suffix(' kg')->placeholder('—'),
                 TextEntry::make('bmi')->label('BMI')->placeholder('—'),
                 TextEntry::make('goal')->formatStateUsing(fn ($state) => self::GOALS[$state] ?? $state)->placeholder('—'),

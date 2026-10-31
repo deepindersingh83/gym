@@ -63,7 +63,6 @@
                         ['email', 'Email', 'email', true],
                         ['password', 'Choose a password for the member app', 'password', true],
                         ['date_of_birth', 'Date of birth', 'date', false],
-                        ['height_cm', 'Height (cm)', 'number', false],
                         ['weight_kg', 'Weight (kg)', 'number', false],
                         ['emergency_contact_name', 'Emergency contact name', 'text', false],
                         ['emergency_contact_phone', 'Emergency contact phone', 'tel', false],
@@ -74,6 +73,23 @@
                             @error($field)<div class="error">{{ $message }}</div>@enderror
                         </div>
                     @endforeach
+                    @if ($heightInFeet)
+                        <div>
+                            <label for="height_feet">Height (feet and inches)</label>
+                            <div style="display: flex; gap: 8px">
+                                <input id="height_feet" name="height_feet" type="number" min="1" max="8" step="1" placeholder="ft" value="{{ old('height_feet') }}" aria-label="Feet">
+                                <input id="height_inches" name="height_inches" type="number" min="0" max="11.9" step="0.1" placeholder="in" value="{{ old('height_inches') }}" aria-label="Inches">
+                            </div>
+                            @error('height_feet')<div class="error">{{ $message }}</div>@enderror
+                            @error('height_inches')<div class="error">{{ $message }}</div>@enderror
+                        </div>
+                    @else
+                        <div>
+                            <label for="height_cm">Height (cm)</label>
+                            <input id="height_cm" name="height_cm" type="number" step="0.1" value="{{ old('height_cm') }}">
+                            @error('height_cm')<div class="error">{{ $message }}</div>@enderror
+                        </div>
+                    @endif
                     <div>
                         <label for="gender">Gender</label>
                         <select id="gender" name="gender">
