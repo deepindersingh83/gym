@@ -53,6 +53,10 @@ class GymProvisioner
                 $gym->messageTemplates()->create(['event' => $event, 'channel' => 'whatsapp', 'body' => $event->defaultBody()]);
             }
 
+            if ($welcome = (int) config('gym.credits.welcome')) {
+                app(Credits::class)->add($gym, $welcome, 'adjustment', 'Welcome credits');
+            }
+
             return $gym;
         });
     }

@@ -6,6 +6,7 @@ use App\Enums\MessageChannel;
 use App\Filament\Gym\Concerns\ChecksGymAccess;
 use App\Filament\Gym\Resources\Broadcasts\Pages\ManageBroadcasts;
 use App\Models\Broadcast;
+use App\Services\Credits;
 use App\Services\Messaging\Messenger;
 use App\Support\GymOptions;
 use App\Support\Tenancy;
@@ -76,7 +77,14 @@ class BroadcastResource extends Resource
                     ->color('success')
                     ->hidden(fn (Broadcast $record) => $record->sent_at !== null)
                     ->requiresConfirmation()
-                    ->modalDescription(fn (Broadcast $record) => 'Send now to '.app(Messenger::class)->broadcastAudience($record)->count().' members?')
+                    ->modalDescription(function (Broadcast $record) {
+                        $people = app(Messenger::class)->broadcastAudience($record)->count();
+                        $credits = app(Credits::class);
+                        $gym = Tenancy::gym();
+                        $cost = $people * collect($record->channels)->sum(fn ($c) => $credits->costFor($gym, MessageChannel::from($c)));
+
+                        return "Send now to {$people} members?".($cost ? ' This uses up to '.number_format($cost).' message credits (you have '.number_format($gym->fresh()->message_credits).').' : '');
+                    })
                     ->action(function (Broadcast $record): void {
                         $sent = app(Messenger::class)->sendBroadcast($record);
                         Notification::make()->title("Sent to {$sent} members")->success()->send();

@@ -80,6 +80,37 @@ return [
         'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
     ],
 
+    /*
+    | Prepaid message credits. A WhatsApp or SMS message sent through the
+    | platform's own provider account uses credits; gyms using their own
+    | WhatsApp / MSG91 account, email and member-app notifications are free.
+    */
+    'credits' => [
+        'cost' => [
+            'whatsapp' => (int) env('CREDITS_PER_WHATSAPP', 1),
+            'sms' => (int) env('CREDITS_PER_SMS', 1),
+        ],
+        'welcome' => (int) env('CREDITS_WELCOME', 50),
+        'low_balance' => (int) env('CREDITS_LOW_BALANCE', 50),
+        // Packs gyms can buy: credits => price (in the platform currency).
+        'packs' => [
+            500 => 299,
+            2000 => 999,
+            5000 => 2199,
+            15000 => 5999,
+        ],
+    ],
+
+    /*
+    | The platform's own Razorpay account, for what gyms pay you (message credits).
+    | Separate from each gym's Razorpay keys, which collect member payments.
+    */
+    'platform_razorpay' => [
+        'key_id' => env('PLATFORM_RAZORPAY_KEY_ID'),
+        'key_secret' => env('PLATFORM_RAZORPAY_KEY_SECRET'),
+        'webhook_secret' => env('PLATFORM_RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
     'razorpay' => [
         'key_id' => env('RAZORPAY_KEY_ID'),
         'key_secret' => env('RAZORPAY_KEY_SECRET'),

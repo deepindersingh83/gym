@@ -6,11 +6,13 @@ use App\Enums\MessageChannel;
 use App\Enums\MessageEvent;
 use App\Enums\SubscriptionStatus;
 use App\Models\Broadcast;
+use App\Models\CreditTransaction;
 use App\Models\Gym;
 use App\Models\Member;
 use App\Models\MessageLog;
 use App\Models\MessageTemplate;
 use App\Models\Subscription;
+use App\Services\Credits;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +24,8 @@ use Throwable;
  */
 class Messenger
 {
+    public function __construct(protected Credits $credits) {}
+
     /**
      * @param  array<string, mixed>  $vars  Extra placeholder values.
      * @param  list<MessageChannel>|null  $channels  Defaults to the gym's reminder channels.
@@ -67,9 +71,9 @@ class Messenger
             $body = $this->render($rawBody, $vars);
             $subject = $broadcast?->title ?? ($template?->subject ? $this->render($template->subject, $vars) : $event->getLabel().' — '.$gym->name);
 
-            [$status, $error] = $this->deliver($gym, $channel, $member, $recipient, $body, $subject, $template?->provider_template, $this->orderedValues($rawBody, $vars));
+            [$status, $error, $usage] = $this->deliver($gym, $channel, $member, $recipient, $body, $subject, $template?->provider_template, $this->orderedValues($rawBody, $vars));
 
-            MessageLog::withoutGlobalScopes()->create([
+            $log = MessageLog::withoutGlobalScopes()->create([
                 'gym_id' => $gym->id,
                 'member_id' => $member->id,
                 'subscription_id' => $subscription?->id,
@@ -83,6 +87,7 @@ class Messenger
                 'dedupe_key' => $dedupeKey,
             ]);
 
+            $usage?->update(['message_log_id' => $log->id]);
             $sent += $status === 'failed' ? 0 : 1;
         }
 
@@ -148,9 +153,11 @@ class Messenger
         return array_map(fn ($key) => (string) ($vars[$key] ?? ''), $matches[1]);
     }
 
-    /** @return array{0: string, 1: ?string} status (sent, logged, failed) and error */
+    /** @return array{0: string, 1: ?string, 2: ?CreditTransaction} status (sent, logged, failed), error, credits used */
     protected function deliver(Gym $gym, MessageChannel $channel, Member $member, string $recipient, string $body, string $subject, ?string $providerTemplate, array $params): array
     {
+        $usage = null;
+
         try {
             $driver = match ($channel) {
                 MessageChannel::WhatsApp => new WhatsAppChannel($gym),
@@ -162,16 +169,35 @@ class Messenger
             if (! $driver->isConfigured()) {
                 Log::info("[{$channel->value}] to {$recipient}: {$body}");
 
-                return ['logged', 'No provider configured; message written to the log only.'];
+                return ['logged', 'No provider configured; message written to the log only.', null];
+            }
+
+            // Messages through the platform's WhatsApp / SMS account use the gym's prepaid credits.
+            if ($cost = $this->credits->costFor($gym, $channel)) {
+                $usage = $this->credits->debit($gym, $cost, $channel->getLabel().' to '.$recipient);
+
+                if (! $usage) {
+                    $this->credits->alertIfLow($gym);
+
+                    return ['failed', 'Out of message credits. Top up under Messaging → Message credits.', null];
+                }
             }
 
             $driver->send($member, $recipient, $body, $subject, $providerTemplate, $params);
 
-            return ['sent', null];
+            if ($usage) {
+                $this->credits->alertIfLow($gym);
+            }
+
+            return ['sent', null, $usage];
         } catch (Throwable $e) {
             report($e);
 
-            return ['failed', mb_substr($e->getMessage(), 0, 1000)];
+            if ($usage) {
+                $this->credits->refund($gym, $usage);
+            }
+
+            return ['failed', mb_substr($e->getMessage(), 0, 1000), null];
         }
     }
 }

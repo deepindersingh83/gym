@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\Gyms\Pages\EditGym;
 use App\Filament\Admin\Resources\Gyms\Pages\ListGyms;
 use App\Models\Gym;
 use App\Models\SaasPlan;
+use App\Services\Credits;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -132,6 +133,8 @@ class GymResource extends Resource
                 TextColumn::make('trial_ends_at')->label('Trial ends')->date('d M Y')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('subscription_ends_at')->label('Paid until')->date('d M Y')->placeholder('—'),
                 TextColumn::make('members_count')->label('Members'),
+                TextColumn::make('message_credits')->label('Credits')->numeric()->sortable()
+                    ->color(fn ($state) => $state < (int) config('gym.credits.low_balance') ? 'danger' : null),
                 TextColumn::make('branches_count')->label('Branches')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('staff_memberships_count')->label('Staff')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')->label('Signed up')->date('d M Y')->sortable(),
@@ -191,6 +194,17 @@ class GymResource extends Resource
                                 ->title('Active until '.$record->subscription_ends_at->format('d M Y'))
                                 ->body($payment->commission ? 'Partner commission: ₹'.number_format((float) $payment->commission->amount, 2) : null)
                                 ->success()->send();
+                        }),
+                    Action::make('credits')
+                        ->label('Adjust message credits')
+                        ->icon(Heroicon::OutlinedCircleStack)
+                        ->schema([
+                            TextInput::make('credits')->label('Credits to add (use a minus sign to remove)')->integer()->required()->notIn([0]),
+                            TextInput::make('reason')->label('Reason')->default('Added by support')->required()->maxLength(200),
+                        ])
+                        ->action(function (Gym $record, array $data) {
+                            app(Credits::class)->add($record, (int) $data['credits'], 'adjustment', $data['reason']);
+                            Notification::make()->title('Balance is now '.number_format($record->message_credits).' credits')->success()->send();
                         }),
                     Action::make('ownerPassword')
                         ->label('Set owner password')

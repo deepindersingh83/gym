@@ -121,6 +121,19 @@ Owners enter their domain under **Gym settings → Website → Your own domain**
 - **Quick option, no Meta app:** under **Gym settings → Integrations → Lead webhook**, create an address and use it in Zapier, Make or Pabbly ("Facebook Lead Ads → Webhook POST").
 - **Direct option:** create a Meta app with the **Webhooks** product. Subscribe the **Page → leadgen** field with callback URL `https://yourapp.com/webhooks/meta` and the verify token from `META_VERIFY_TOKEN`. Put the app secret in `META_APP_SECRET`. The app needs the `leads_retrieval` and `pages_manage_metadata` permissions, which require Meta app review. Each gym then enters its page ID and page token in Integrations and clicks **Connect page**.
 
+### Message credits (SMS / WhatsApp)
+
+- Each WhatsApp or SMS sent through **your** platform account (`WHATSAPP_*`, `MSG91_*` in `.env`) uses the gym's prepaid credits. That's 1 credit per message by default (`CREDITS_PER_WHATSAPP`, `CREDITS_PER_SMS`).
+- Free: gyms that connect their own WhatsApp or MSG91 account, email, and member-app notifications.
+- New gyms get `CREDITS_WELCOME` free credits. Owners get one alert a day when the balance drops below `CREDITS_LOW_BALANCE`. With no credits left, messages are paused and listed as "Out of message credits" under Sent messages, and they go out on the next run after a top-up.
+- **Buying:** gyms buy packs under **Messaging → Message credits**. Packs and prices are in `config/gym.php` (`credits.packs`). Payment goes to your Razorpay account (`PLATFORM_RAZORPAY_*`). Add the webhook `https://yourapp.com/webhooks/razorpay-platform` with the event `payment_link.paid`, and credits are added when it's paid. Without those keys, the page tells owners to contact you; add credits by hand in **Admin → Gyms → ⋮ → Adjust message credits**.
+
+### Partners, usage and software payments
+
+- **Admin → Partners:** add resellers or affiliates with a commission %. They sign in at `/partner` to see their referral link (`?ref=CODE`), referred gyms and commissions.
+- **Admin → Gyms → ⋮ → Record payment:** records what a gym paid you. Referred gyms automatically create the partner's commission. Pay commissions out under **Admin → Commissions**.
+- **Admin → Gym usage:** each gym marked Active, At risk or Inactive, with the reasons, last staff login and check-in trend.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

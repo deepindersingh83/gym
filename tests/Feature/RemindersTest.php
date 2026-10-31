@@ -55,7 +55,7 @@ class RemindersTest extends TestCase
         config(['gym.whatsapp.token' => 'token', 'gym.whatsapp.phone_number_id' => '123']);
         Http::fake(['graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid']]])]);
 
-        $gym = $this->createGym(['name' => 'Iron Temple']);
+        $gym = $this->createGym(['name' => 'Iron Temple', 'message_credits' => 10]);
         $member = $this->createMember($gym, ['name' => 'Asha', 'phone' => '98765 43210']);
         MessageTemplate::withoutGlobalScopes()->create([
             'gym_id' => $gym->id, 'event' => MessageEvent::DuesReminder, 'channel' => 'whatsapp',
@@ -65,12 +65,13 @@ class RemindersTest extends TestCase
 
         $sent = app(Messenger::class)->send($member, MessageEvent::DuesReminder, channels: [MessageChannel::WhatsApp]);
 
-        $this->assertSame(1, $sent);
+        $this->assertSame(1, $sent, (string) MessageLog::withoutGlobalScopes()->value('error'));
         Http::assertSent(fn ($request) => $request['to'] === '919876543210'
             && $request['template']['name'] === 'dues_v1'
             && $request['template']['components'][0]['parameters'][0]['text'] === 'Asha'
             && $request['template']['components'][0]['parameters'][1]['text'] === '500.00');
         $this->assertSame('Namaste Asha, please clear 500.00 at Iron Temple.', MessageLog::withoutGlobalScopes()->value('body'));
+        $this->assertSame(9, $gym->fresh()->message_credits);
     }
 
     public function test_broadcast_reaches_only_the_chosen_audience(): void
