@@ -26,10 +26,11 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# Published by "php artisan filament:upgrade" on composer install
+# Published on composer install (filament:upgrade, livewire:assets)
 /public/css/filament
 /public/js/filament
 /public/fonts/filament
+/public/vendor/livewire
 
 # Temporary files from install.sh
 /.env.??????

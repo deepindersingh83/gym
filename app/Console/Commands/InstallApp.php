@@ -59,6 +59,10 @@ class InstallApp extends Command
         });
         $this->step('Clearing the application cache', fn () => $this->callSilently('cache:clear') === 0);
         $this->step('Publishing panel assets', fn () => $this->callSilently('filament:assets') === 0);
+        // Livewire otherwise serves its script from a Laravel route ending in ".js", which
+        // CloudPanel's Nginx answers as a missing static file: forms then just reload the page.
+        $this->step('Publishing Livewire script', fn () => $this->callSilently('vendor:publish', ['--tag' => 'livewire:assets', '--force' => true]) === 0
+            && file_exists(public_path('vendor/livewire/livewire.min.js')));
 
         if (! $this->option('skip-cache') && app()->isProduction()) {
             $this->step('Building caches', fn () => $this->callSilently('optimize') === 0 && $this->callSilently('filament:optimize') === 0);

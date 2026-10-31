@@ -97,6 +97,12 @@ bash install.sh --yes --php=/usr/bin/php8.3
 supervisorctl restart gym-queue   # as root
 ```
 
+### Troubleshooting
+
+- **Login or signup just reloads the page.** The browser could not load Livewire's script. CloudPanel's Nginx serves every `.js` address itself, and Livewire's default script address only exists as a Laravel route, so it returns 404. `composer install` and `install.sh` now publish the script to `public/vendor/livewire`, which fixes it. On an existing server, run `bash install.sh --yes` (or `php artisan vendor:publish --tag=livewire:assets --force && php artisan optimize`). To confirm, open the browser's developer tools → Network and reload: nothing should show 404.
+- **HTTP 526 from Cloudflare.** The server's SSL certificate is missing or invalid. Install a Cloudflare Origin Certificate in CloudPanel and set Cloudflare SSL to Full (strict).
+- **"tempnam(): file created in the system's temporary directory".** `bootstrap/cache` is not writable, usually because a command was run as root. As root: `chown -R <site-user>:<site-user> ~<site-user>/htdocs/yourapp.com`.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.
