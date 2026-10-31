@@ -11,6 +11,10 @@ class SaasPayment extends Model
 {
     protected $guarded = ['id'];
 
+    protected $attributes = [
+        'kind' => 'subscription',
+    ];
+
     protected function casts(): array
     {
         return [

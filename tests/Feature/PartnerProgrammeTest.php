@@ -105,6 +105,7 @@ class PartnerProgrammeTest extends TestCase
         $gym = $this->createGym(['name' => 'Partner Gym', 'partner_id' => $partner->id]);
         $this->createGym(['name' => 'Someone Else Gym']);
         SaasPayment::create(['gym_id' => $gym->id, 'amount' => 1000, 'paid_at' => now()]);
+        $this->assertSame(200.0, (float) PartnerCommission::query()->sole()->amount);
 
         $this->actingAs($user);
         $this->get('/partner')->assertRedirect('/partner/dashboard');

@@ -21,6 +21,11 @@ class ApplyGymContext
         if ($gym instanceof Gym) {
             Tenancy::setGym($gym);
 
+            // Usage tracking for the platform owner; support visits by the super admin don't count.
+            if (! $request->user()?->is_super_admin && (! $gym->last_activity_at || $gym->last_activity_at->lt(now()->subMinutes(5)))) {
+                $gym->forceFill(['last_activity_at' => now()])->saveQuietly();
+            }
+
             if ($gym->primary_color) {
                 FilamentColor::register(['primary' => Color::hex($gym->primary_color)]);
             }
