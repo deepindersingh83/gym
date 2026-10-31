@@ -5,6 +5,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\GymWebsiteController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
+use App\Http\Controllers\LeadWebhookController;
 use App\Http\Controllers\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,9 @@ Route::post('/join/{gym:slug}', [JoinController::class, 'store'])->middleware('t
 Route::get('/join/{gym:slug}/welcome', [JoinController::class, 'welcome'])->name('join.welcome');
 
 Route::post('/webhooks/razorpay/{gym:slug}', RazorpayWebhookController::class)->name('webhooks.razorpay');
+Route::get('/webhooks/meta', [LeadWebhookController::class, 'verifyMeta'])->name('webhooks.meta.verify');
+Route::post('/webhooks/meta', [LeadWebhookController::class, 'meta'])->name('webhooks.meta');
+Route::post('/webhooks/leads/{token}', [LeadWebhookController::class, 'generic'])->middleware('throttle:60,1')->name('webhooks.leads');
 
 Route::middleware('auth')->group(function () {
     Route::get('/invoices/{subscription}', [DocumentController::class, 'invoice'])->name('invoices.show');

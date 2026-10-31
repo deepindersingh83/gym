@@ -4,8 +4,10 @@ namespace App\Filament\Gym\Pages\Tenancy;
 
 use App\Enums\MessageChannel;
 use App\Filament\Gym\Schemas\GymDetailsFields;
+use App\Services\MetaLeadAds;
 use App\Support\Access;
 use App\Support\Height;
+use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -13,13 +15,18 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Pages\Tenancy\EditTenantProfile;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+use Throwable;
 
 /** Gym settings: details, branding, opening hours, reminders and integrations. */
 class EditGymProfile extends EditTenantProfile
@@ -144,6 +151,51 @@ class EditGymProfile extends EditTenantProfile
                                 TextInput::make('integrations.msg91_auth_key')->label('Auth key')->password()->revealable(),
                                 TextInput::make('integrations.msg91_sender')->label('Sender ID'),
                             ]),
+                        ]),
+                    Section::make('Facebook & Instagram lead ads')
+                        ->key('facebookLeads')
+                        ->description('Leads from your Facebook and Instagram lead forms appear in Enquiries automatically.')
+                        ->headerActions([
+                            Action::make('connectFacebook')
+                                ->label('Connect page')
+                                ->icon(Heroicon::OutlinedLink)
+                                ->requiresConfirmation()
+                                ->modalDescription('Save the page ID and token first. This subscribes your page so its lead-form submissions are sent here.')
+                                ->action(function () {
+                                    try {
+                                        app(MetaLeadAds::class)->connectPage($this->tenant->fresh());
+                                        Notification::make()->title('Facebook page connected')->body('New lead-form submissions will appear in Enquiries.')->success()->send();
+                                    } catch (Throwable $e) {
+                                        Notification::make()->title('Could not connect the page')->body($e->getMessage())->danger()->send();
+                                    }
+                                }),
+                        ])
+                        ->schema([
+                            Grid::make(2)->schema([
+                                TextInput::make('facebook_page_id')->label('Facebook page ID')->maxLength(40)
+                                    ->helperText('Facebook page → About → Page transparency → Page ID. Instagram ads run from this page too.'),
+                                TextInput::make('integrations.facebook_page_token')->label('Page access token')->password()->revealable()
+                                    ->helperText('A long-lived page token with the leads_retrieval permission.'),
+                            ]),
+                        ]),
+                    Section::make('Lead webhook (Zapier, Make, Pabbly)')
+                        ->key('leadWebhook')
+                        ->description('Send enquiries from any other tool to this address as JSON or a form post: name, phone, email, source, message.')
+                        ->headerActions([
+                            Action::make('leadWebhook')
+                                ->label(fn () => $this->tenant->lead_webhook_token ? 'New address' : 'Create address')
+                                ->icon(Heroicon::OutlinedKey)
+                                ->requiresConfirmation(fn () => (bool) $this->tenant->lead_webhook_token)
+                                ->modalDescription('The old address stops working. Update it in Zapier / Make.')
+                                ->action(function () {
+                                    $this->tenant->forceFill(['lead_webhook_token' => Str::random(40)])->save();
+                                    Notification::make()->title('Webhook address ready')->body(route('webhooks.leads', $this->tenant->lead_webhook_token))->success()->persistent()->send();
+                                }),
+                        ])
+                        ->schema([
+                            Text::make(fn () => $this->tenant->lead_webhook_token
+                                ? 'POST '.route('webhooks.leads', $this->tenant->lead_webhook_token)
+                                : 'No address yet. Click "Create address".')->copyable(),
                         ]),
                 ]),
             ])->persistTabInQueryString(),

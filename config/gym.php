@@ -58,6 +58,16 @@ return [
         'msg91_flow_id' => env('MSG91_FLOW_ID'),
     ],
 
+    /*
+    | One Meta (Facebook) app for the whole platform receives lead-ad webhooks
+    | for every gym's page. Each gym connects its own page in Gym settings.
+    */
+    'meta' => [
+        'app_secret' => env('META_APP_SECRET'),
+        'verify_token' => env('META_VERIFY_TOKEN'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
+    ],
+
     'razorpay' => [
         'key_id' => env('RAZORPAY_KEY_ID'),
         'key_secret' => env('RAZORPAY_KEY_SECRET'),

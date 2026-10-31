@@ -4,15 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
-use App\Enums\StaffRole;
-use App\Filament\Gym\Resources\Leads\LeadResource;
 use App\Models\Gym;
 use App\Models\GymUser;
-use App\Models\Lead;
 use App\Models\MembershipPlan;
+use App\Services\LeadInbox;
 use App\Support\Tenancy;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -60,9 +56,7 @@ class GymWebsiteController extends Controller
             'message' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $lead = Lead::withoutGlobalScopes()->create([
-            'gym_id' => $gym->id,
-            'branch_id' => $gym->branches()->where('is_active', true)->orderBy('id')->value('id'),
+        app(LeadInbox::class)->receive($gym, [
             'name' => $data['name'],
             'phone' => $data['phone'],
             'email' => $data['email'] ?? null,
@@ -72,9 +66,7 @@ class GymWebsiteController extends Controller
             'trial_time' => $data['trial_time'],
             'interest' => $data['interest'] ?? null,
             'notes' => $data['message'] ?? null,
-        ]);
-
-        $this->notifyStaff($gym, $lead);
+        ], 'Free trial booked');
 
         return redirect()->to(url()->previous().'#trial')->with('trial_booked', true);
     }
@@ -91,22 +83,5 @@ class GymWebsiteController extends Controller
     protected function isPublic(Gym $gym): bool
     {
         return $gym->hasActiveSaasSubscription() && $gym->websiteSetting('enabled', true);
-    }
-
-    /** Bell notification for the people who handle enquiries. */
-    protected function notifyStaff(Gym $gym, Lead $lead): void
-    {
-        $recipients = $gym->users()
-            ->wherePivot('is_active', true)
-            ->wherePivotIn('role', [StaffRole::Owner->value, StaffRole::Manager->value, StaffRole::Receptionist->value])
-            ->get()
-            ->filter(fn ($user) => $user->pivot->role === StaffRole::Owner || ! $user->pivot->branch_id || $user->pivot->branch_id === $lead->branch_id);
-
-        Notification::make()
-            ->title('Free trial booked: '.$lead->name)
-            ->body($lead->trial_date->format('D, d M').' · '.$lead->trial_time.' · '.$lead->phone)
-            ->icon('heroicon-o-calendar-days')
-            ->actions([Action::make('open')->label('View enquiries')->url(LeadResource::getUrl('index', tenant: $gym, panel: 'gym'))])
-            ->sendToDatabase($recipients);
     }
 }
