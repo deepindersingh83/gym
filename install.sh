@@ -154,6 +154,27 @@ ok "Composer $("${COMPOSER[@]}" --version --no-ansi --no-interaction 2>/dev/null
 
 [[ -f artisan && -f composer.json ]] || fail "Run this from the project folder (artisan not found in ${APP_DIR})"
 
+# Every file must belong to the user running the installer. Files left behind by an
+# earlier run as root can't be changed by the site user (git pull, composer and the
+# caches would all fail), so stop here with the one command that fixes it.
+ME="$(id -un)"
+# Cached views and config are rebuilt anyway: remove stale ones we may not own.
+for cache_dir in storage/framework/views storage/framework/cache/data bootstrap/cache; do
+    [[ -d "$cache_dir" ]] && find "$cache_dir" -type f ! -user "$ME" -delete 2>/dev/null || true
+done
+mapfile -t not_mine < <(find . ! -user "$ME" -print 2>/dev/null | head -n 5)
+if [[ ${#not_mine[@]} -gt 0 ]]; then
+    printf '    %s\n' "${not_mine[@]}" | sed "s|^    \./|    ${APP_DIR}/|"
+    fail "Some files are owned by another user (usually root), so ${ME} cannot update them.
+   Log in as root once and run:
+
+       chown -R ${ME}:${ME} ${APP_DIR}
+
+   (No root password? Use your VPS provider's browser terminal / root login.)
+   Then, as ${ME}:  cd ${APP_DIR} && git pull && bash install.sh --yes"
+fi
+ok "All files belong to ${ME}"
+
 # ---------------------------------------------------------------- 2. .env
 step "Setting up .env"
 

@@ -101,6 +101,7 @@ supervisorctl restart gym-queue   # as root
 
 - **Login or signup just reloads the page.** The browser could not load Livewire's script. CloudPanel's Nginx serves every `.js` address itself, and Livewire's default script address only exists as a Laravel route, so it returns 404. `composer install` and `install.sh` now publish the script to `public/vendor/livewire`, which fixes it. On an existing server, run `bash install.sh --yes` (or `php artisan vendor:publish --tag=livewire:assets --force && php artisan optimize`). To confirm, open the browser's developer tools → Network and reload: nothing should show 404.
 - **HTTP 526 from Cloudflare.** The server's SSL certificate is missing or invalid. Install a Cloudflare Origin Certificate in CloudPanel and set Cloudflare SSL to Full (strict).
+- **"Operation not permitted" or `git pull`: "cannot open .git/FETCH_HEAD: Permission denied".** Some files are owned by root because a command was once run as root. As root (your VPS provider's browser terminal or root SSH login): `chown -R <site-user>:<site-user> /home/<site-user>/htdocs/yourapp.com`. Then run `git pull && bash install.sh --yes` as the site user. The installer now checks this first and prints the exact command.
 - **"tempnam(): file created in the system's temporary directory".** `bootstrap/cache` is not writable, usually because a command was run as root. As root: `chown -R <site-user>:<site-user> ~<site-user>/htdocs/yourapp.com`.
 
 ## Integrations (per gym, under Gym settings → Integrations)
