@@ -119,6 +119,9 @@ class GymResource extends Resource
                     ->state(fn (Gym $record) => $record->users->firstWhere('pivot.role', StaffRole::Owner)?->email)
                     ->placeholder('—'),
                 TextColumn::make('city')->searchable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('custom_domain')->label('Own domain')->placeholder('—')->toggleable(isToggledHiddenByDefault: true)
+                    ->color(fn (Gym $record) => $record->custom_domain_status === 'active' ? 'success' : 'warning')
+                    ->description(fn (Gym $record) => $record->custom_domain ? ucfirst((string) $record->custom_domain_status) : null),
                 TextColumn::make('saasPlan.name')->label('Plan')->badge(),
                 TextColumn::make('status')->badge()->formatStateUsing(fn ($state) => self::STATUSES[$state] ?? $state)
                     ->color(fn ($state) => match ($state) {

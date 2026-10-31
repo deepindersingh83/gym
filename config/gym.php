@@ -59,6 +59,18 @@ return [
     ],
 
     /*
+    | Gyms can serve their website, signup page and member app on their own
+    | domain. They point a CNAME at cname_target. With Cloudflare for SaaS
+    | configured, SSL certificates are issued automatically; otherwise add
+    | each domain to the CloudPanel site and issue a certificate there.
+    */
+    'custom_domains' => [
+        'cname_target' => env('CUSTOM_DOMAIN_TARGET'),
+        'cloudflare_zone_id' => env('CLOUDFLARE_ZONE_ID'),
+        'cloudflare_api_token' => env('CLOUDFLARE_API_TOKEN'),
+    ],
+
+    /*
     | One Meta (Facebook) app for the whole platform receives lead-ad webhooks
     | for every gym's page. Each gym connects its own page in Gym settings.
     */

@@ -7,6 +7,7 @@ use App\Models\Gym;
 use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\User;
+use App\Services\CustomDomains;
 use App\Services\Payments\RazorpayService;
 use App\Support\Height;
 use App\Support\Tenancy;
@@ -36,6 +37,15 @@ class JoinController extends Controller
             'goals' => MemberResource::GOALS,
             'heightInFeet' => Height::usesFeet($gym),
         ]);
+    }
+
+    /** /join on a gym's own domain. */
+    public function showForDomain(): View
+    {
+        $gym = CustomDomains::current();
+        abort_unless($gym, 404);
+
+        return $this->show($gym);
     }
 
     public function store(Request $request, Gym $gym): RedirectResponse

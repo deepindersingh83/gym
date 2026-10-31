@@ -16,7 +16,8 @@
     $whatsapp = $gym->whatsapp ?: $gym->phone;
     $socials = collect(['instagram' => 'Instagram', 'facebook' => 'Facebook', 'youtube' => 'YouTube'])
         ->filter(fn ($label, $key) => filled($gym->websiteSetting($key)));
-    $joinUrl = route('join.show', $gym);
+    $onOwnDomain = \App\Services\CustomDomains::current()?->is($gym);
+    $joinUrl = $onOwnDomain ? route('join.domain', absolute: false) : route('join.show', $gym, false);
     $time = fn ($t) => $t ? Carbon::parse($t)->format('g:i A') : '';
     $dayIndex = ['monday' => 'Mo', 'tuesday' => 'Tu', 'wednesday' => 'We', 'thursday' => 'Th', 'friday' => 'Fr', 'saturday' => 'Sa', 'sunday' => 'Su'];
 
@@ -350,7 +351,7 @@
                             We'll contact you shortly to confirm your free trial at {{ $gym->name }}.
                         </div>
                     @else
-                        <form method="POST" action="{{ route('website.trial', $gym) }}">
+                        <form method="POST" action="{{ route('website.trial', $gym, false) }}">
                             @csrf
                             <div class="hp" aria-hidden="true"><label for="website_url">Leave empty</label><input id="website_url" name="website_url" tabindex="-1" autocomplete="off"></div>
                             <div class="grid2">
@@ -410,7 +411,7 @@
                 <strong style="color: #fff">{{ $gym->name }}</strong> · © {{ now()->year }}
                 <div style="margin-top: 6px">
                     @foreach ($socials as $key => $label)<a href="{{ $gym->websiteSetting($key) }}" target="_blank" rel="noopener">{{ $label }}</a>@endforeach
-                    <a href="{{ route('filament.member.auth.login') }}">Member login</a>
+                    <a href="{{ route('filament.member.auth.login', absolute: false) }}">Member login</a>
                 </div>
             </div>
             <div>Powered by <a href="{{ route('home') }}" style="margin: 0">{{ config('app.name') }}</a></div>

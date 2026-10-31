@@ -104,6 +104,23 @@ supervisorctl restart gym-queue   # as root
 - **"Operation not permitted" or `git pull`: "cannot open .git/FETCH_HEAD: Permission denied".** Some files are owned by root because a command was once run as root. As root (your VPS provider's browser terminal or root SSH login): `chown -R <site-user>:<site-user> /home/<site-user>/htdocs/yourapp.com`. Then run `git pull && bash install.sh --yes` as the site user. The installer now checks this first and prints the exact command.
 - **"tempnam(): file created in the system's temporary directory".** `bootstrap/cache` is not writable, usually because a command was run as root. As root: `chown -R <site-user>:<site-user> ~<site-user>/htdocs/yourapp.com`.
 
+### Gym custom domains (members.theirgym.com)
+
+Owners enter their domain under **Gym settings → Website → Your own domain** and add a **CNAME** record pointing to `CUSTOM_DOMAIN_TARGET`. Their website, `/join` and the member app then run on that domain. The app re-checks pending domains every 15 minutes.
+
+**Automatic SSL (recommended): Cloudflare for SaaS**
+1. Your platform domain must be on Cloudflare. In the zone, go to **SSL/TLS → Custom Hostnames**, enable it, and set a fallback origin such as `customers.yourapp.com` (a proxied A record to your server).
+2. Create an API token with **Zone → SSL and Certificates → Edit** for that zone.
+3. In `.env`: `CUSTOM_DOMAIN_TARGET=customers.yourapp.com`, `CLOUDFLARE_ZONE_ID=...`, `CLOUDFLARE_API_TOKEN=...`, then run `bash install.sh --yes`.
+4. In CloudPanel's **Vhost** editor, let the site answer any host. Add `_` to `server_name`, for example `server_name yourapp.com *.yourapp.com _;`, so gym domains reach the app.
+
+**Without Cloudflare:** leave the Cloudflare values empty. A domain goes live when its DNS points to your server. Then add it to the site in CloudPanel (**Domains**) and issue a Let's Encrypt certificate for it.
+
+### Facebook & Instagram lead ads
+
+- **Quick option, no Meta app:** under **Gym settings → Integrations → Lead webhook**, create an address and use it in Zapier, Make or Pabbly ("Facebook Lead Ads → Webhook POST").
+- **Direct option:** create a Meta app with the **Webhooks** product. Subscribe the **Page → leadgen** field with callback URL `https://yourapp.com/webhooks/meta` and the verify token from `META_VERIFY_TOKEN`. Put the app secret in `META_APP_SECRET`. The app needs the `leads_retrieval` and `pages_manage_metadata` permissions, which require Meta app review. Each gym then enters its page ID and page token in Integrations and clicks **Connect page**.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

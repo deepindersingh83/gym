@@ -54,7 +54,7 @@
                 <div class="alert">Please fix the highlighted fields below.</div>
             @endif
 
-            <form method="POST" action="{{ route('join.store', $gym) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('join.store', $gym, false) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="grid">
                     @foreach ([

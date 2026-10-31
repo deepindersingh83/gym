@@ -4,6 +4,8 @@ namespace App\Filament\Gym\Pages\Tenancy;
 
 use App\Enums\MessageChannel;
 use App\Filament\Gym\Schemas\GymDetailsFields;
+use App\Models\Gym;
+use App\Services\CustomDomains;
 use App\Services\MetaLeadAds;
 use App\Support\Access;
 use App\Support\Height;
@@ -78,6 +80,40 @@ class EditGymProfile extends EditTenantProfile
                             TextInput::make('website.instagram')->label('Instagram link')->url(),
                             TextInput::make('website.facebook')->label('Facebook link')->url(),
                             TextInput::make('website.youtube')->label('YouTube link')->url(),
+                        ]),
+                    Section::make('Your own domain')
+                        ->key('customDomain')
+                        ->description(fn () => 'Show your website, signup page and member app on your own address, e.g. members.yourgym.com. Add a CNAME record for it pointing to '.CustomDomains::target().' at your domain provider.')
+                        ->headerActions([
+                            Action::make('checkDomain')
+                                ->label('Check now')
+                                ->icon(Heroicon::OutlinedArrowPath)
+                                ->visible(fn () => filled($this->tenant->custom_domain))
+                                ->action(function () {
+                                    $message = app(CustomDomains::class)->refresh($this->tenant);
+                                    Notification::make()->title($message)->status($this->tenant->custom_domain_status === 'active' ? 'success' : 'warning')->send();
+                                }),
+                        ])
+                        ->schema([
+                            TextInput::make('custom_domain')
+                                ->label('Domain')
+                                ->placeholder('members.yourgym.com')
+                                ->prefix('https://')
+                                ->dehydrated(false)
+                                ->rule(fn () => function (string $attribute, $value, $fail) {
+                                    $domain = CustomDomains::normalize((string) $value);
+
+                                    if (filled($value) && ! CustomDomains::isValid($domain)) {
+                                        $fail('Enter a domain like members.yourgym.com (without https://).');
+                                    } elseif (filled($value) && Gym::query()->where('custom_domain', $domain)->whereKeyNot($this->tenant->getKey())->exists()) {
+                                        $fail('This domain is already used by another gym.');
+                                    }
+                                }),
+                            Text::make(fn () => match ($this->tenant->custom_domain_status) {
+                                'active' => '✓ Live: https://'.$this->tenant->custom_domain,
+                                'pending' => '⏳ Waiting for DNS / SSL. We check every 15 minutes, or click "Check now".',
+                                default => 'Not set up.',
+                            }),
                         ]),
                 ]),
                 Tab::make('Units')->schema([
@@ -200,6 +236,12 @@ class EditGymProfile extends EditTenantProfile
                 ]),
             ])->persistTabInQueryString(),
         ]);
+    }
+
+    protected function afterSave(): void
+    {
+        $domain = $this->form->getRawState()['custom_domain'] ?? null;
+        app(CustomDomains::class)->assign($this->tenant, filled($domain) ? $domain : null);
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

@@ -17,6 +17,7 @@ Route::post('/gym/{gym:slug}/trial', [GymWebsiteController::class, 'bookTrial'])
 Route::get('/sitemap.xml', [GymWebsiteController::class, 'sitemap'])->name('sitemap');
 
 // Public signup page for each gym.
+Route::get('/join', [JoinController::class, 'showForDomain'])->name('join.domain');
 Route::get('/join/{gym:slug}', [JoinController::class, 'show'])->name('join.show');
 Route::post('/join/{gym:slug}', [JoinController::class, 'store'])->middleware('throttle:10,1')->name('join.store');
 Route::get('/join/{gym:slug}/welcome', [JoinController::class, 'welcome'])->name('join.welcome');
