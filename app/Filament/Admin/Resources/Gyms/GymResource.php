@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\Gyms\Pages\ListGyms;
 use App\Models\Gym;
 use App\Models\SaasPlan;
 use App\Services\Billing\GymBilling;
+use App\Services\Compliance\GymDataExport;
 use App\Services\Credits;
 use App\Support\AdminAccess;
 use App\Support\AdminLog;
@@ -172,6 +173,8 @@ class GymResource extends Resource
                 TextColumn::make('branches_count')->label('Branches')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('staff_memberships_count')->label('Staff')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')->label('Signed up')->date('d M Y')->sortable(),
+                TextColumn::make('deletion_scheduled_at')->label('Deleted for good on')->date('d M Y')->color('danger')->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')->options(self::STATUSES),
@@ -257,6 +260,17 @@ class GymResource extends Resource
                             $owner->update(['password' => $data['password']]);
                             AdminLog::record('Set the owner password', $record, ['owner' => $owner->email]);
                             Notification::make()->title("Password updated for {$owner->email}")->success()->send();
+                        }),
+                    Action::make('exportData')
+                        ->label('Export all data (ZIP)')
+                        ->icon(Heroicon::OutlinedArrowDownTray)
+                        ->color('gray')
+                        ->visible(fn () => AdminAccess::can('gyms.export'))
+                        ->action(function (Gym $record) {
+                            $export = app(GymDataExport::class);
+                            AdminLog::record('Exported gym data', $record);
+
+                            return response()->download($export->build($record), $export->filename($record))->deleteFileAfterSend();
                         }),
                     Action::make('suspend')
                         ->label('Suspend')

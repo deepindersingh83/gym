@@ -184,6 +184,18 @@ You can add people under **Admin → Platform → Admin team**. Each person gets
 - **Lost phone:** another owner can use "Reset two-step login" on the Admin team page. On the server, you can also run `php artisan gym:reset-2fa you@example.com`.
 - **Admin log:** **Admin log** records who did what, such as extended trials, recorded payments, credits, suspensions, settings changes and team changes. These entries are not shown in the gym's own audit log.
 
+## Data and privacy
+
+- **Gym data export:** owners use **Setup → Your data** to download a ZIP. It has one CSV per table, plus member photos and website images. Secrets such as API keys are left out. Platform Support can export a gym's data from **Admin → Gyms**.
+- **Consent:** when someone joins online, the time they agreed is recorded. When staff add a member, they tick "Member agreed".
+- **Member requests:**
+  - Members can download their own data from the member app.
+  - They can also ask to be erased. The gym owner is emailed when they do.
+  - Staff use **Download data** or **Erase personal data** on the member's profile.
+  - Erasing removes personal details, photo, health answers, measurements, plans and the app login. Payments stay as anonymous records because tax law requires them.
+- **Suspend:** **Admin → Gyms → Suspend** takes a reason, which is shown to the gym. Staff can view their data but cannot make changes.
+- **Closing an account:** the owner (or an admin) can close a gym account. It can be restored for 30 days. After that, `gym:purge-closed` deletes all its data and files for good; this runs daily. The platform's own tax invoices to the gym are kept.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

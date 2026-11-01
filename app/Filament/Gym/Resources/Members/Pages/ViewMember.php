@@ -24,6 +24,8 @@ class ViewMember extends ViewRecord
                 MemberActions::invite(),
                 MemberActions::setAppPassword(),
                 EditAction::make(),
+                MemberActions::downloadData(),
+                MemberActions::erase(),
             ]),
         ];
     }

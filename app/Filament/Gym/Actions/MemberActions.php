@@ -12,6 +12,7 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Compliance\MemberData;
 use App\Services\LoginCodes;
 use App\Services\Messaging\Messenger;
 use App\Services\Messaging\PhoneNumber;
@@ -188,6 +189,44 @@ class MemberActions
                 $user->update(['password' => $data['password']]);
 
                 Notification::make()->title('Member app password set')->success()->send();
+            });
+    }
+
+    /** The member's data as a JSON file, e.g. when they ask what the gym holds about them. */
+    public static function downloadData(): Action
+    {
+        return Action::make('downloadData')
+            ->label('Download data')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('gray')
+            ->visible(fn (Member $record) => Access::can('members.edit') && ! $record->erased_at)
+            ->action(function (Member $record) {
+                $json = json_encode(app(MemberData::class)->export($record), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                activity()->causedBy(auth()->user())->performedOn($record)->log('Downloaded member data');
+
+                return response()->streamDownload(fn () => print ($json), Str::slug($record->name).'-data.json', ['Content-Type' => 'application/json']);
+            });
+    }
+
+    /** Right to be forgotten: removes personal details but keeps anonymous payment records. */
+    public static function erase(): Action
+    {
+        return Action::make('erase')
+            ->label('Erase personal data')
+            ->icon(Heroicon::OutlinedUserMinus)
+            ->color('danger')
+            ->visible(fn (Member $record) => Access::can('members.delete') && ! $record->erased_at)
+            ->requiresConfirmation()
+            ->modalHeading(fn (Member $record) => "Erase {$record->name}'s personal data?")
+            ->modalDescription('Name, mobile, email, address, date of birth, photo, health answers, measurements, workout and diet plans and the member app login are removed. This cannot be undone. Memberships and payments stay as anonymous records because tax law requires them.')
+            ->schema([
+                TextInput::make('confirm')->label('Type ERASE to confirm')->required()->in(['ERASE'])
+                    ->validationMessages(['in' => 'Type ERASE in capital letters.']),
+            ])
+            ->modalSubmitActionLabel('Erase')
+            ->action(function (Member $record): void {
+                app(MemberData::class)->erase($record, auth()->user());
+                Notification::make()->title('Personal data erased')->success()->send();
             });
     }
 

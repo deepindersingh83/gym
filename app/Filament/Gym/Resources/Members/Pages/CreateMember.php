@@ -56,6 +56,12 @@ class CreateMember extends CreateRecord
         $this->appPassword = $data['app_password'] ?? null;
         unset($data['membership'], $data['app_password']);
 
+        if (! empty($data['consent'])) {
+            $data['consented_at'] = now();
+            $data['consent_source'] = 'staff';
+        }
+        unset($data['consent']);
+
         return $data;
     }
 

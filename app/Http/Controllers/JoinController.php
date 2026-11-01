@@ -108,6 +108,8 @@ class JoinController extends Controller
                 'user_id' => $user->id,
                 'photo_path' => filled($data['photo_data'] ?? null) ? PhotoStore::store($data['photo_data'], "members/{$gym->id}") : null,
                 'source' => 'online',
+                'consented_at' => now(),
+                'consent_source' => 'online_signup',
                 ...collect($data)->except(['password', 'photo_data', 'plan_id', 'consent'])->all(),
             ]);
         });

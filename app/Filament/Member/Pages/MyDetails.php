@@ -6,8 +6,10 @@ use App\Filament\Forms\Components\CameraPhoto;
 use App\Filament\Gym\Resources\Members\MemberResource;
 use App\Filament\Gym\Support\HeightField;
 use App\Models\Member;
+use App\Services\Compliance\MemberData;
 use App\Support\CurrentMember;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -19,10 +21,49 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Mail;
 
 /** The member's own details: view everything, update what is theirs to change. */
 class MyDetails extends Page
 {
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('downloadMyData')
+                ->label('Download my data')
+                ->icon(Heroicon::OutlinedArrowDownTray)
+                ->color('gray')
+                ->action(function () {
+                    $member = CurrentMember::get();
+                    $json = json_encode(app(MemberData::class)->export($member), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                    return response()->streamDownload(fn () => print ($json), 'my-data.json', ['Content-Type' => 'application/json']);
+                }),
+            Action::make('requestDeletion')
+                ->label('Ask to delete my account')
+                ->icon(Heroicon::OutlinedTrash)
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalDescription('We will ask the gym to erase your personal details. They keep anonymous payment records that tax law requires.')
+                ->action(function () {
+                    $member = CurrentMember::get();
+                    $gym = $member->gym;
+                    $to = $gym->users()->wherePivot('role', 'owner')->first()?->email ?? $gym->email;
+
+                    activity()->performedOn($member)->causedBy(auth()->user())->tap(fn ($a) => $a->gym_id = $gym->id)->log('Member asked for their data to be erased');
+
+                    if ($to) {
+                        rescue(fn () => Mail::raw(
+                            "{$member->name} ({$member->member_code}) asked for their personal data to be erased.\n\nOpen their profile in ".config('app.name').' and use "Erase personal data".',
+                            fn ($m) => $m->to($to)->subject("Data erasure request: {$member->name}")
+                        ), report: true);
+                    }
+
+                    Notification::make()->title('Request sent to '.$gym->name)->body('The gym will erase your details. Contact them if you have questions.')->success()->send();
+                }),
+        ];
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
     protected static ?string $title = 'My details';

@@ -7,3 +7,4 @@ Schedule::command('gym:send-reminders')->dailyAt('09:00')->withoutOverlapping()-
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command('gym:check-domains')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('gym:billing-reminders')->dailyAt('08:30')->withoutOverlapping()->onOneServer();
+Schedule::command('gym:purge-closed')->dailyAt('03:15')->withoutOverlapping()->onOneServer();

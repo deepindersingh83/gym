@@ -23,6 +23,7 @@ use BackedEnum;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -144,6 +145,14 @@ class MemberResource extends Resource
                 Select::make('source')->options(['walk_in' => 'Walk-in', 'online' => 'Online signup', 'referral' => 'Referral', 'social' => 'Social media', 'other' => 'Other'])->default('walk_in'),
                 Toggle::make('is_active')->label('Active')->default(true)->inline(false),
                 Textarea::make('notes')->rows(2)->columnSpanFull(),
+                Checkbox::make('consent')
+                    ->label('Member agreed to the gym storing their details, photo and health information')
+                    ->helperText(fn (?Member $record) => $record?->consented_at ? 'Agreed on '.$record->consented_at->format('d M Y').' ('.str_replace('_', ' ', (string) $record->consent_source).').' : 'Ask the member before saving their details.')
+                    ->default(false)
+                    ->disabled(fn (?Member $record) => (bool) $record?->consented_at)
+                    ->formatStateUsing(fn (?Member $record) => (bool) $record?->consented_at)
+                    ->dehydrated(fn (?Member $record) => ! $record?->consented_at)
+                    ->columnSpanFull(),
             ]),
         ]);
     }
