@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\GymHealth;
+use App\Services\PlatformSettings;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Settings edited in /admin override the .env / config defaults.
+        PlatformSettings::apply();
     }
 }

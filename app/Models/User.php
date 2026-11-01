@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdminRole;
 use App\Enums\StaffRole;
 use App\Services\Messaging\PhoneNumber;
 use Database\Factories\UserFactory;
@@ -37,6 +38,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
+            'admin_role' => AdminRole::class,
         ];
     }
 
@@ -76,6 +78,17 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             ->withTimestamps();
     }
 
+    /** Platform admin role; older super admins without a role count as owners. */
+    public function adminRole(): ?AdminRole
+    {
+        return $this->admin_role ?? ($this->is_super_admin ? AdminRole::Owner : null);
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return $this->adminRole() !== null;
+    }
+
     public function partner(): HasOne
     {
         return $this->hasOne(Partner::class);
@@ -96,7 +109,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     public function canAccessPanel(Panel $panel): bool
     {
         return match ($panel->getId()) {
-            'admin' => $this->is_super_admin,
+            'admin' => $this->isPlatformAdmin(),
             // Anyone who is not purely a gym member may open the gym panel; a new
             // owner without a gym yet is sent to the "register your gym" wizard.
             'gym' => $this->gyms()->wherePivot('is_active', true)->exists() || ! $this->memberProfiles()->exists(),

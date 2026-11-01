@@ -17,15 +17,19 @@ class PlatformBilling
         return filled(config('gym.platform_razorpay.key_id')) && filled(config('gym.platform_razorpay.key_secret'));
     }
 
-    /** @return array<int, float> credits => price */
-    public function packs(): array
+    /** @return array<int, float> credits => price in the given currency (packs without a price there are left out) */
+    public function packs(string $currency = 'INR'): array
     {
-        return collect(config('gym.credits.packs'))->mapWithKeys(fn ($price, $credits) => [(int) $credits => (float) $price])->sortKeys()->all();
+        return collect(config('gym.credits.packs'))
+            ->filter(fn ($pack) => (float) ($pack[$currency] ?? 0) > 0 && (int) ($pack['credits'] ?? 0) > 0)
+            ->mapWithKeys(fn ($pack) => [(int) $pack['credits'] => (float) $pack[$currency]])
+            ->sortKeys()
+            ->all();
     }
 
     public function creditsPaymentLink(Gym $gym, int $credits): string
     {
-        $price = $this->packs()[$credits] ?? throw new RuntimeException('Unknown credit pack.');
+        $price = $this->packs($gym->currency)[$credits] ?? throw new RuntimeException('Unknown credit pack.');
 
         if (! $this->isConfigured()) {
             throw new RuntimeException('Online top-up is not available yet. Please contact support to add credits.');

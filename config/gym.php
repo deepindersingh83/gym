@@ -92,12 +92,12 @@ return [
         ],
         'welcome' => (int) env('CREDITS_WELCOME', 50),
         'low_balance' => (int) env('CREDITS_LOW_BALANCE', 50),
-        // Packs gyms can buy: credits => price (in the platform currency).
+        // Packs gyms can buy, priced per currency.
         'packs' => [
-            500 => 299,
-            2000 => 999,
-            5000 => 2199,
-            15000 => 5999,
+            ['credits' => 500, 'INR' => 299, 'AUD' => 9],
+            ['credits' => 2000, 'INR' => 999, 'AUD' => 29],
+            ['credits' => 5000, 'INR' => 2199, 'AUD' => 59],
+            ['credits' => 15000, 'INR' => 5999, 'AUD' => 149],
         ],
     ],
 
@@ -109,6 +109,33 @@ return [
         'key_id' => env('PLATFORM_RAZORPAY_KEY_ID'),
         'key_secret' => env('PLATFORM_RAZORPAY_KEY_SECRET'),
         'webhook_secret' => env('PLATFORM_RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    | Stripe: how Australian gyms pay the platform (Razorpay is India only).
+    */
+    'stripe' => [
+        'secret_key' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    | Your company, as it appears on the tax invoices gyms receive from you.
+    | One entry per country you sell in; gyms are billed by their country's entry.
+    */
+    'billing' => [
+        'grace_days' => 3,
+        'reminder_days' => [7, 3, 1],
+        'trial_full_access' => true,
+        'entities' => [
+            'IN' => ['legal_name' => null, 'address' => null, 'tax_id' => null, 'state_code' => null, 'tax_rate' => 18, 'invoice_prefix' => 'GF-IN'],
+            'AU' => ['legal_name' => null, 'address' => null, 'tax_id' => null, 'state_code' => null, 'tax_rate' => 10, 'invoice_prefix' => 'GF-AU'],
+        ],
+    ],
+
+    'support' => [
+        'email' => env('SUPPORT_EMAIL'),
+        'phone' => env('SUPPORT_PHONE'),
     ],
 
     'razorpay' => [

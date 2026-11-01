@@ -14,8 +14,8 @@
             <x-filament::section>
                 <div style="font-size: 1.6rem; font-weight: 800">{{ number_format($credits) }}</div>
                 <div style="opacity: .7">credits</div>
-                <div style="font-size: 1.15rem; font-weight: 600; margin: .5rem 0">₹{{ number_format($price) }}
-                    <span style="opacity: .6; font-size: .8rem; font-weight: 400">(₹{{ number_format($price / $credits, 2) }} each)</span>
+                <div style="font-size: 1.15rem; font-weight: 600; margin: .5rem 0">{{ \App\Support\Money::symbol($currency).number_format($price) }}
+                    <span style="opacity: .6; font-size: .8rem; font-weight: 400">({{ \App\Support\Money::symbol($currency).number_format($price / $credits, 2) }} each)</span>
                 </div>
                 @if ($canBuy && $canBuyOnline)
                     {{ ($this->buyAction)(['credits' => $credits]) }}

@@ -57,7 +57,8 @@ class MessageCredits extends Page implements HasTable
 
         return [
             'balance' => (int) Tenancy::gym()->fresh()->message_credits,
-            'packs' => $billing->packs(),
+            'packs' => $billing->packs(Tenancy::gym()->currency),
+            'currency' => Tenancy::gym()->currency,
             'canBuyOnline' => $billing->isConfigured(),
             'canBuy' => Access::can('settings.edit'),
             'costs' => config('gym.credits.cost'),
