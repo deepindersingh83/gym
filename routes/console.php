@@ -6,3 +6,4 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('gym:send-reminders')->dailyAt('09:00')->withoutOverlapping()->onOneServer();
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command('gym:check-domains')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('gym:billing-reminders')->dailyAt('08:30')->withoutOverlapping()->onOneServer();

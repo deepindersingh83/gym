@@ -3,6 +3,7 @@
 namespace App\Filament\Gym\Pages;
 
 use App\Models\CreditTransaction;
+use App\Services\Billing\BillingCheckout;
 use App\Services\Payments\PlatformBilling;
 use App\Support\Access;
 use App\Support\Tenancy;
@@ -59,7 +60,7 @@ class MessageCredits extends Page implements HasTable
             'balance' => (int) Tenancy::gym()->fresh()->message_credits,
             'packs' => $billing->packs(Tenancy::gym()->currency),
             'currency' => Tenancy::gym()->currency,
-            'canBuyOnline' => $billing->isConfigured(),
+            'canBuyOnline' => app(BillingCheckout::class)->isAvailable(Tenancy::gym()),
             'canBuy' => Access::can('settings.edit'),
             'costs' => config('gym.credits.cost'),
             'ownWhatsApp' => filled(data_get(Tenancy::gym()->integrations, 'whatsapp_token')),
@@ -74,7 +75,7 @@ class MessageCredits extends Page implements HasTable
             ->visible(fn () => Access::can('settings.edit'))
             ->action(function (array $arguments) {
                 try {
-                    return redirect()->away(app(PlatformBilling::class)->creditsPaymentLink(Tenancy::gym(), (int) $arguments['credits']));
+                    return redirect()->away(app(BillingCheckout::class)->buyCredits(Tenancy::gym(), (int) $arguments['credits']));
                 } catch (Throwable $e) {
                     Notification::make()->title('Could not start the payment')->body($e->getMessage())->danger()->send();
                 }

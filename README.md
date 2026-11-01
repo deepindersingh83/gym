@@ -156,6 +156,19 @@ Each gym has a **country** (Gym settings → Details).
 
 The demo seeder includes an Australian gym: `owner.au@example.com` / `password`.
 
+## Billing gyms (your income)
+
+Gym owners see **Setup → Plan & billing**: their plan, usage against limits, what each plan includes, and their tax invoices.
+
+- **India** pays through your Razorpay account, and **Australia** pays through Stripe. Enter the keys in **Admin → Platform settings → Payments**, then add the webhook URLs shown there in Razorpay and Stripe.
+- **Pay once:** monthly or yearly, with discount codes (**Admin → Discount codes**). Switching plans gives credit for the unused days of the current plan.
+- **Auto-renew:** the owner approves a card or UPI mandate once. Each charge happens when the paid time (or the trial) runs out. Discount codes apply to one-off payments only.
+- **Tax invoices:** every payment, including credit packs and payments you record by hand, gets a numbered invoice from your company. Invoice numbers are per financial year, e.g. `GF-IN-2627-0001`. The invoice is emailed to the owner.
+  - **India:** 18% GST is added, as CGST + SGST within your state or IGST outside it.
+  - **Australia:** prices include 10% GST.
+  - Fill in your company details under **Platform settings → Your company**. If you leave the GSTIN or ABN empty, no GST is charged.
+- **Reminders and lock:** owners get emails before the end date (on the days set in settings), on the day it ends, and on the last day of the grace period. After the grace period, changes are locked until they pay. This runs daily via `gym:billing-reminders`; the CloudPanel cron already covers it.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

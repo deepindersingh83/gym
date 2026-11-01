@@ -4,10 +4,12 @@ namespace App\Filament\Admin\Resources\SaasPayments;
 
 use App\Filament\Admin\Resources\SaasPayments\Pages\ListSaasPayments;
 use App\Models\SaasPayment;
+use App\Support\AdminAccess;
+use App\Support\Money;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -32,14 +34,30 @@ class SaasPaymentResource extends Resource
                 TextColumn::make('gym.name')->searchable(),
                 TextColumn::make('kind')->badge()->formatStateUsing(fn ($state) => $state === 'credits' ? 'Message credits' : 'Software plan'),
                 TextColumn::make('saasPlan.name')->label('Plan')->placeholder('—'),
+                TextColumn::make('invoice_number')->label('Invoice')->placeholder('—')->searchable(),
                 TextColumn::make('months')->suffix(' mo')->placeholder('—'),
-                TextColumn::make('amount')->money('INR')->summarize(Sum::make()->money('INR')),
-                TextColumn::make('reference')->placeholder('—')->toggleable(),
-                TextColumn::make('commission.amount')->label('Partner commission')->money('INR')->placeholder('—'),
+                TextColumn::make('amount')->formatStateUsing(fn ($state, SaasPayment $record) => Money::format((float) $state, $record->currency)),
+                TextColumn::make('tax_amount')->label('GST')->formatStateUsing(fn ($state, SaasPayment $record) => Money::format((float) $state, $record->currency))->toggleable(),
+                TextColumn::make('gateway')->badge()->formatStateUsing(fn ($state) => ucfirst($state))->toggleable(),
+                TextColumn::make('reference')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('commission.amount')->label('Partner commission')
+                    ->formatStateUsing(fn ($state, SaasPayment $record) => Money::format((float) $state, $record->currency))->placeholder('—'),
             ])
             ->filters([
                 SelectFilter::make('kind')->options(['subscription' => 'Software plan', 'credits' => 'Message credits']),
+                SelectFilter::make('currency')->options(['INR' => 'India (₹)', 'AUD' => 'Australia (A$)']),
+                SelectFilter::make('gateway')->options(['manual' => 'Recorded by hand', 'razorpay' => 'Razorpay', 'stripe' => 'Stripe']),
+            ])
+            ->recordActions([
+                Action::make('invoice')->label('Invoice')->icon(Heroicon::OutlinedArrowDownTray)
+                    ->visible(fn (SaasPayment $record) => filled($record->invoice_number))
+                    ->url(fn (SaasPayment $record) => route('saas-invoices.show', $record), shouldOpenInNewTab: true),
             ]);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return AdminAccess::can('payments');
     }
 
     public static function canCreate(): bool

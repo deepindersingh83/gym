@@ -13,6 +13,8 @@ class SaasPayment extends Model
 
     protected $attributes = [
         'kind' => 'subscription',
+        'gateway' => 'manual',
+        'currency' => 'INR',
     ];
 
     protected function casts(): array
@@ -20,6 +22,11 @@ class SaasPayment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'subtotal' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'invoice' => 'array',
+            'period_start' => 'date',
+            'period_end' => 'date',
         ];
     }
 
@@ -50,6 +57,11 @@ class SaasPayment extends Model
     public function saasPlan(): BelongsTo
     {
         return $this->belongsTo(SaasPlan::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(SaasCoupon::class, 'saas_coupon_id');
     }
 
     public function commission(): HasOne

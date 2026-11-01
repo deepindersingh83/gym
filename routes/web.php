@@ -25,6 +25,7 @@ Route::get('/join/{gym:slug}/welcome', [JoinController::class, 'welcome'])->name
 
 Route::post('/webhooks/razorpay/{gym:slug}', RazorpayWebhookController::class)->name('webhooks.razorpay');
 Route::post('/webhooks/razorpay-platform', PlatformWebhookController::class)->name('webhooks.platform');
+Route::post('/webhooks/stripe', [PlatformWebhookController::class, 'stripe'])->name('webhooks.stripe');
 Route::get('/webhooks/meta', [LeadWebhookController::class, 'verifyMeta'])->name('webhooks.meta.verify');
 Route::post('/webhooks/meta', [LeadWebhookController::class, 'meta'])->name('webhooks.meta');
 Route::post('/webhooks/leads/{token}', [LeadWebhookController::class, 'generic'])->middleware('throttle:60,1')->name('webhooks.leads');
@@ -32,5 +33,6 @@ Route::post('/webhooks/leads/{token}', [LeadWebhookController::class, 'generic']
 Route::middleware('auth')->group(function () {
     Route::get('/invoices/{subscription}', [DocumentController::class, 'invoice'])->name('invoices.show');
     Route::get('/receipts/{payment}', [DocumentController::class, 'receipt'])->name('receipts.show');
+    Route::get('/billing/invoices/{saasPayment}', [DocumentController::class, 'saasInvoice'])->name('saas-invoices.show');
     Route::post('/branch-switch', BranchSwitchController::class)->name('branch.select');
 });

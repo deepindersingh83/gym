@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\StaffRole;
 use App\Models\Gym;
 use App\Models\Payment;
+use App\Models\SaasPayment;
 use App\Models\Subscription;
+use App\Services\Billing\GymBilling;
 use App\Support\Access;
+use App\Support\AdminAccess;
 use App\Support\Tenancy;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +36,17 @@ class DocumentController extends Controller
         return Pdf::loadView('pdf.receipt', ['payment' => $payment, 'gym' => $payment->gym])
             ->setPaper('a5')
             ->stream("receipt-{$payment->receipt_number}.pdf");
+    }
+
+    /** Tax invoice from the platform to a gym, for the gym owner and the platform's finance team. */
+    public function saasInvoice(Request $request, SaasPayment $saasPayment, GymBilling $billing): Response
+    {
+        $user = $request->user();
+        $isOwner = $saasPayment->gym->users()->whereKey($user->id)->wherePivot('role', StaffRole::Owner->value)->exists();
+        abort_unless($isOwner || AdminAccess::can('payments', $user), 403);
+        abort_if(blank($saasPayment->invoice_number), 404);
+
+        return $billing->invoicePdf($saasPayment)->stream("{$saasPayment->invoice_number}.pdf");
     }
 
     protected function authorizeDocument(Request $request, Model $record, string $ability): void

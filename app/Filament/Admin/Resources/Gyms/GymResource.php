@@ -8,8 +8,11 @@ use App\Filament\Admin\Resources\Gyms\Pages\EditGym;
 use App\Filament\Admin\Resources\Gyms\Pages\ListGyms;
 use App\Models\Gym;
 use App\Models\SaasPlan;
+use App\Services\Billing\GymBilling;
 use App\Services\Credits;
+use App\Support\AdminLog;
 use App\Support\Country;
+use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -170,33 +173,27 @@ class GymResource extends Resource
                         ->schema([
                             Select::make('saas_plan_id')->label('Plan')->options(fn () => SaasPlan::query()->pluck('name', 'id'))
                                 ->default(fn (Gym $record) => $record->saas_plan_id)->required()->live()
-                                ->afterStateUpdated(fn ($state, $get, $set) => $set('amount', static::suggestedAmount($state, $get('months')))),
+                                ->afterStateUpdated(fn ($state, $get, $set, Gym $record) => $set('amount', static::suggestedAmount($state, $get('months'), $record))),
                             Select::make('months')->options([1 => '1 month', 3 => '3 months', 6 => '6 months', 12 => '12 months'])
                                 ->default(12)->required()->live()
-                                ->afterStateUpdated(fn ($state, $get, $set) => $set('amount', static::suggestedAmount($get('saas_plan_id'), $state))),
-                            TextInput::make('amount')->label('Amount received')->prefix('₹')->numeric()->minValue(0)->required()
-                                ->default(fn (Gym $record) => static::suggestedAmount($record->saas_plan_id, 12)),
+                                ->afterStateUpdated(fn ($state, $get, $set, Gym $record) => $set('amount', static::suggestedAmount($get('saas_plan_id'), $state, $record))),
+                            TextInput::make('amount')->label('Amount received (incl. GST)')->prefix(fn (Gym $record) => Money::symbol($record->currency))->numeric()->minValue(0)->required()
+                                ->default(fn (Gym $record) => static::suggestedAmount($record->saas_plan_id, 12, $record)),
                             TextInput::make('reference')->label('Payment reference')->maxLength(100),
                         ])
                         ->action(function (Gym $record, array $data) {
-                            $from = $record->status === 'active' && $record->subscription_ends_at?->isFuture() ? $record->subscription_ends_at : now();
-                            $record->update([
-                                'saas_plan_id' => $data['saas_plan_id'],
-                                'status' => 'active',
-                                'subscription_ends_at' => $from->copy()->addMonthsNoOverflow((int) $data['months']),
-                            ]);
-                            $payment = $record->saasPayments()->create([
-                                'saas_plan_id' => $data['saas_plan_id'],
-                                'recorded_by' => auth()->id(),
-                                'kind' => 'subscription',
-                                'amount' => $data['amount'],
-                                'months' => $data['months'],
+                            $months = (int) $data['months'];
+                            $payment = app(GymBilling::class)->recordPlanPayment($record, SaasPlan::query()->findOrFail($data['saas_plan_id']), $months === 12 ? 'yearly' : 'monthly', (float) $data['amount'], [
+                                'months' => $months,
+                                'gateway' => 'manual',
                                 'reference' => $data['reference'] ?? null,
-                                'paid_at' => now(),
+                                'recorded_by' => auth()->id(),
                             ]);
+                            AdminLog::record('Recorded a software payment', $record, ['invoice' => $payment?->invoice_number, 'amount' => $data['amount']]);
+                            $record->refresh();
                             Notification::make()
                                 ->title('Active until '.$record->subscription_ends_at->format('d M Y'))
-                                ->body($payment->commission ? 'Partner commission: ₹'.number_format((float) $payment->commission->amount, 2) : null)
+                                ->body(collect(['Invoice '.$payment?->invoice_number.' emailed to the owner.', $payment?->commission ? 'Partner commission: '.Money::format((float) $payment->commission->amount, $record->currency) : null])->filter()->implode(' '))
                                 ->success()->send();
                         }),
                     Action::make('credits')
@@ -232,8 +229,8 @@ class GymResource extends Resource
             ]);
     }
 
-    /** Plan price for the period: the yearly price for 12 months, otherwise monthly × months. */
-    public static function suggestedAmount(mixed $planId, mixed $months): ?float
+    /** Amount due incl. GST: the yearly price for 12 months, otherwise monthly × months, in the gym's currency. */
+    public static function suggestedAmount(mixed $planId, mixed $months, ?Gym $gym = null): ?float
     {
         $plan = $planId ? SaasPlan::query()->find($planId) : null;
 
@@ -241,9 +238,19 @@ class GymResource extends Resource
             return null;
         }
 
-        return (int) $months === 12 && (float) $plan->yearly_price > 0
-            ? (float) $plan->yearly_price
-            : round((float) $plan->monthly_price * max(1, (int) $months), 2);
+        $currency = $gym?->currency ?? 'INR';
+        $price = (int) $months === 12 && $plan->price($currency, 'yearly') > 0
+            ? $plan->price($currency, 'yearly')
+            : round($plan->price($currency, 'monthly') * max(1, (int) $months), 2);
+
+        if (! $gym) {
+            return $price;
+        }
+
+        $billing = app(GymBilling::class);
+        $rate = $billing->entity($gym)['tax_rate'];
+
+        return $billing->taxInclusive($gym) ? $price : round($price * (1 + $rate / 100), 2);
     }
 
     public static function getPages(): array

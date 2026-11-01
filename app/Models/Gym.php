@@ -48,6 +48,7 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
             'subscription_ends_at' => 'datetime',
             'onboarding_completed' => 'boolean',
             'gst_registered' => 'boolean',
+            'auto_renew' => 'boolean',
         ];
     }
 
@@ -175,9 +176,16 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
     {
         return match ($this->status) {
             'trial' => (bool) $this->trial_ends_at?->isFuture(),
-            'active' => ! $this->subscription_ends_at || $this->subscription_ends_at->isFuture(),
+            // Paid gyms keep working for the grace period after the end date, then changes lock.
+            'active' => ! $this->subscription_ends_at || $this->subscription_ends_at->copy()->addDays((int) config('gym.billing.grace_days'))->isFuture(),
             default => false,
         };
+    }
+
+    /** Plan end date has passed but the grace period has not. */
+    public function inGracePeriod(): bool
+    {
+        return $this->status === 'active' && $this->subscription_ends_at?->isPast() && $this->hasActiveSaasSubscription();
     }
 
     /** Whether the gym's software plan includes a feature module (trials get everything unless turned off). */

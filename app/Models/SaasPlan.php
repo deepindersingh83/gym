@@ -14,6 +14,7 @@ class SaasPlan extends Model
         return [
             'features' => 'array',
             'modules' => 'array',
+            'gateway_ids' => 'array',
             'monthly_price_aud' => 'decimal:2',
             'yearly_price_aud' => 'decimal:2',
             'is_active' => 'boolean',

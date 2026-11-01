@@ -104,7 +104,7 @@ class Settings extends Page
 
                     Tab::make('Payments')->schema([
                         Section::make('Razorpay (gyms in India pay you here)')
-                            ->description(fn () => 'Webhook URL: '.route('webhooks.platform').' (events: payment_link.paid, subscription.charged)')
+                            ->description(fn () => 'Webhook URL: '.route('webhooks.platform').' (events: payment_link.paid, subscription.authenticated, subscription.charged, subscription.cancelled, subscription.halted)')
                             ->columns(3)
                             ->schema([
                                 TextInput::make('gym.platform_razorpay.key_id')->label('Key ID'),
@@ -112,7 +112,7 @@ class Settings extends Page
                                 $this->secret('gym.platform_razorpay.webhook_secret', 'Webhook secret'),
                             ]),
                         Section::make('Stripe (gyms in Australia pay you here)')
-                            ->description(fn () => 'Webhook URL: '.url('/webhooks/stripe').' (events: checkout.session.completed, invoice.paid)')
+                            ->description(fn () => 'Webhook URL: '.route('webhooks.stripe').' (events: checkout.session.completed, invoice.paid, customer.subscription.deleted)')
                             ->columns(2)
                             ->schema([
                                 $this->secret('gym.stripe.secret_key', 'Secret key (sk_live_…)'),
