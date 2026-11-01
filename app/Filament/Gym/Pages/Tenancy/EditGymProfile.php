@@ -8,6 +8,7 @@ use App\Models\Gym;
 use App\Services\CustomDomains;
 use App\Services\MetaLeadAds;
 use App\Support\Access;
+use App\Support\Country;
 use App\Support\Height;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
@@ -127,7 +128,6 @@ class EditGymProfile extends EditTenantProfile
                     Grid::make(3)->schema([
                         TextInput::make('invoice_prefix')->required()->maxLength(10),
                         TextInput::make('member_code_prefix')->required()->maxLength(10),
-                        TextInput::make('currency')->required()->length(3)->default('INR'),
                     ]),
                 ]),
                 Tab::make('Reminders')->schema([
@@ -164,6 +164,8 @@ class EditGymProfile extends EditTenantProfile
                 ]),
                 Tab::make('Integrations')->schema([
                     Section::make('Razorpay (online payments and UPI AutoPay)')
+                        // Razorpay is India only.
+                        ->visible(fn () => ! Country::isAustralia())
                         ->description(fn () => 'Webhook URL: '.route('webhooks.razorpay', $gym).' — events: payment_link.paid, subscription.charged')
                         ->schema([
                             Grid::make(2)->schema([
@@ -172,6 +174,9 @@ class EditGymProfile extends EditTenantProfile
                                 TextInput::make('integrations.razorpay_webhook_secret')->label('Webhook secret')->password()->revealable(),
                             ]),
                         ]),
+                    Section::make('Online member payments')
+                        ->visible(fn () => Country::isAustralia())
+                        ->description('Razorpay works only in India. Australian gyms take member payments by card, cash or bank transfer / PayID at the desk; online member payments for Australia are on the roadmap.'),
                     Section::make('WhatsApp Cloud API')
                         ->description('Optional. Leave empty to use the platform WhatsApp number.')
                         ->schema([

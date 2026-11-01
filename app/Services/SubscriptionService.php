@@ -10,6 +10,7 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Support\Country;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -17,29 +18,55 @@ use InvalidArgumentException;
 class SubscriptionService
 {
     /**
-     * Price breakdown for a plan: discount on the plan price, then GST (split
-     * equally into CGST and SGST) on plan price less discount plus admission fee.
+     * Price breakdown for a plan in the gym's country.
      *
-     * @return array<string, float>
+     * India: GST is added on top of (plan price - discount + admission fee) and
+     * split equally into CGST and SGST.
+     * Australia: prices already include GST; the GST inside the total is
+     * total x rate / (100 + rate).
+     *
+     * No GST when the gym is not registered for it.
+     *
+     * @return array<string, float|bool>
      */
     public function quote(Gym $gym, MembershipPlan $plan, ?Coupon $coupon = null, bool $withAdmissionFee = true): array
     {
         $price = (float) $plan->price;
         $admission = $withAdmissionFee ? (float) $plan->admission_fee : 0.0;
         $discount = $coupon?->isUsable() ? $coupon->discountFor($price) : 0.0;
-        $taxable = round($price - $discount + $admission, 2);
         $rate = $gym->isGstRegistered() ? (float) $plan->gst_rate : 0.0;
-        $halfTax = round($taxable * $rate / 200, 2);
+        $amount = round($price - $discount + $admission, 2);
+
+        if (Country::get($gym->country, 'tax_inclusive')) {
+            $tax = round($amount * $rate / (100 + $rate), 2);
+
+            return [
+                'plan_price' => round($price, 2),
+                'admission_fee' => round($admission, 2),
+                'discount_amount' => $discount,
+                'taxable_amount' => round($amount - $tax, 2),
+                'gst_rate' => $rate,
+                'cgst_amount' => 0.0,
+                'sgst_amount' => 0.0,
+                'tax_amount' => $tax,
+                'tax_inclusive' => true,
+                'total_amount' => $amount,
+            ];
+        }
+
+        $halfTax = round($amount * $rate / 200, 2);
 
         return [
             'plan_price' => round($price, 2),
             'admission_fee' => round($admission, 2),
             'discount_amount' => $discount,
-            'taxable_amount' => $taxable,
+            'taxable_amount' => $amount,
             'gst_rate' => $rate,
             'cgst_amount' => $halfTax,
             'sgst_amount' => $halfTax,
-            'total_amount' => round($taxable + 2 * $halfTax, 2),
+            'tax_amount' => round(2 * $halfTax, 2),
+            'tax_inclusive' => false,
+            'total_amount' => round($amount + 2 * $halfTax, 2),
         ];
     }
 

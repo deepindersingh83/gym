@@ -6,6 +6,7 @@ use App\Enums\PlanType;
 use App\Filament\Gym\Concerns\ChecksGymAccess;
 use App\Filament\Gym\Resources\MembershipPlans\Pages\ManageMembershipPlans;
 use App\Models\MembershipPlan;
+use App\Support\Country;
 use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
@@ -58,9 +59,12 @@ class MembershipPlanResource extends Resource
             TextInput::make('duration_value')->label('Duration')->numeric()->minValue(1)->required(),
             Select::make('duration_unit')->options(['day' => 'Days', 'month' => 'Months'])->default('month')->required(),
             TextInput::make('max_persons')->label('People covered')->numeric()->minValue(1)->maxValue(10)->default(1)->required(),
-            TextInput::make('price')->numeric()->minValue(0)->prefix(Money::symbol())->required()->helperText('Before GST.'),
+            TextInput::make('price')->numeric()->minValue(0)->prefix(Money::symbol())->required()
+                ->helperText(fn () => Country::get(Country::of(), 'tax_inclusive') ? 'Including GST.' : 'Before GST.'),
             TextInput::make('admission_fee')->numeric()->minValue(0)->prefix(Money::symbol())->default(0)->helperText('Charged on a member\'s first membership only.'),
-            TextInput::make('gst_rate')->label('GST %')->numeric()->minValue(0)->maxValue(28)->default(18)->helperText('Applied only if the gym has a GSTIN.'),
+            TextInput::make('gst_rate')->label('GST %')->numeric()->minValue(0)->maxValue(28)
+                ->default(fn () => Country::get(Country::of(), 'tax_rate'))
+                ->helperText(fn () => Country::isAustralia() ? 'Applies only if the gym is registered for GST.' : 'Applies only if the gym has a GSTIN.'),
             TextInput::make('pt_sessions')->label('PT sessions included')->numeric()->minValue(0),
             Toggle::make('is_active')->label('Available for sale')->default(true)->inline(false),
             Textarea::make('description')->rows(2)->columnSpanFull()->helperText('Shown on the public signup page.'),

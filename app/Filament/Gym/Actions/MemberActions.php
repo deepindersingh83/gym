@@ -17,6 +17,7 @@ use App\Services\Messaging\Messenger;
 use App\Services\Messaging\PhoneNumber;
 use App\Services\SubscriptionService;
 use App\Support\Access;
+use App\Support\Country;
 use App\Support\Money;
 use App\Support\Tenancy;
 use Filament\Actions\Action;
@@ -95,8 +96,8 @@ class MemberActions
                     ]))
                     ->required(),
                 TextInput::make('amount')->numeric()->minValue(1)->prefix(Money::symbol())->required(),
-                Select::make('method')->options(PaymentMethod::class)->required(),
-                TextInput::make('reference')->label('UPI / transaction ref.')->maxLength(100),
+                Select::make('method')->options(fn () => PaymentMethod::options())->required(),
+                TextInput::make('reference')->label(fn () => Country::isAustralia() ? 'Payment reference' : 'UPI / transaction ref.')->maxLength(100),
                 DateTimePicker::make('paid_at')->required()->maxDate(now()->endOfDay()),
             ])
             ->action(function ($record, array $data): void {

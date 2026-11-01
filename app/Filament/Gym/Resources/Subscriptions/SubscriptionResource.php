@@ -78,8 +78,12 @@ class SubscriptionResource extends Resource
                 TextEntry::make('discount_amount')->label('Discount')->formatStateUsing($money)
                     ->helperText(fn (Subscription $record) => $record->coupon?->code),
                 TextEntry::make('taxable_amount')->formatStateUsing($money),
-                TextEntry::make('cgst_amount')->label(fn (Subscription $record) => 'CGST '.((float) $record->gst_rate / 2).'%')->formatStateUsing($money),
-                TextEntry::make('sgst_amount')->label(fn (Subscription $record) => 'SGST '.((float) $record->gst_rate / 2).'%')->formatStateUsing($money),
+                TextEntry::make('cgst_amount')->label(fn (Subscription $record) => 'CGST '.((float) $record->gst_rate / 2).'%')->formatStateUsing($money)
+                    ->visible(fn (Subscription $record) => ! $record->tax_inclusive),
+                TextEntry::make('sgst_amount')->label(fn (Subscription $record) => 'SGST '.((float) $record->gst_rate / 2).'%')->formatStateUsing($money)
+                    ->visible(fn (Subscription $record) => ! $record->tax_inclusive),
+                TextEntry::make('tax_amount')->label('GST included')->formatStateUsing($money)
+                    ->visible(fn (Subscription $record) => $record->tax_inclusive),
                 TextEntry::make('total_amount')->label('Total')->formatStateUsing($money)->weight('bold'),
                 TextEntry::make('balance_due')->label('Balance due')->formatStateUsing($money)->color(fn ($state) => $state > 0 ? 'danger' : 'success')->weight('bold'),
             ]),

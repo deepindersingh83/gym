@@ -33,6 +33,8 @@ class Subscription extends Model
             'gst_rate' => 'decimal:2',
             'cgst_amount' => 'decimal:2',
             'sgst_amount' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'tax_inclusive' => 'boolean',
             'total_amount' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'auto_renew' => 'boolean',

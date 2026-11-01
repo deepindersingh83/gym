@@ -57,7 +57,7 @@ class PaymentResource extends Resource
                 TextColumn::make('branch.name')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('method')->options(PaymentMethod::class)->multiple(),
+                SelectFilter::make('method')->options(fn () => PaymentMethod::options())->multiple(),
                 SelectFilter::make('received_by')->label('Received by')->options(fn () => GymOptions::staff()),
                 Filter::make('paid_at')
                     ->schema([DatePicker::make('from'), DatePicker::make('until')])

@@ -35,7 +35,7 @@
                         <div class="plan">
                             <div>{{ $plan->name }} <span class="muted">· {{ $plan->duration_label }}</span></div>
                             <strong>{{ \App\Support\Money::format($plan->price, $gym->currency) }}</strong>
-                            @if ($gym->isGstRegistered() && $plan->gst_rate > 0)<span class="muted"> + GST</span>@endif
+                            @if ($gym->isGstRegistered() && $plan->gst_rate > 0)<span class="muted"> {{ $gym->country === 'AU' ? 'incl. GST' : '+ GST' }}</span>@endif
                             @if ($plan->description)<div class="muted">{{ $plan->description }}</div>@endif
                         </div>
                     @endforeach

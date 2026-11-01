@@ -11,7 +11,7 @@ class Money
             'USD' => '$',
             'EUR' => '€',
             'GBP' => '£',
-            'AUD' => 'A$',
+            'AUD' => '$',
             default => ($currency ?? '').' ',
         };
     }

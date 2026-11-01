@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Country;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasCurrentTenantLabel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,7 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
 
     protected $attributes = [
         'status' => 'trial',
+        'country' => 'IN',
         'primary_color' => '#f59e0b',
         'currency' => 'INR',
         'timezone' => 'Asia/Kolkata',
@@ -45,6 +47,7 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
             'trial_ends_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
             'onboarding_completed' => 'boolean',
+            'gst_registered' => 'boolean',
         ];
     }
 
@@ -52,8 +55,18 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
     {
         static::creating(function (Gym $gym): void {
             $gym->slug ??= static::uniqueSlug($gym->name);
+
             $gym->trial_ends_at ??= now()->addDays((int) config('gym.trial_days'));
             $gym->saas_plan_id ??= SaasPlan::query()->where('slug', config('gym.default_saas_plan'))->value('id');
+        });
+
+        // Currency and time zone always match the gym's country.
+        static::saving(function (Gym $gym): void {
+            $gym->currency = Country::get($gym->country, 'currency');
+
+            if (! array_key_exists((string) $gym->timezone, Country::get($gym->country, 'timezones'))) {
+                $gym->timezone = array_key_first(Country::get($gym->country, 'timezones'));
+            }
         });
 
         static::created(function (Gym $gym): void {
@@ -118,9 +131,32 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
         return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
     }
 
+    /** India: has a GSTIN. Australia: has an ABN and is registered for GST. */
     public function isGstRegistered(): bool
     {
-        return filled($this->gstin);
+        return $this->country === 'AU'
+            ? $this->gst_registered && filled($this->abn)
+            : filled($this->gstin);
+    }
+
+    public function taxIdLabel(): string
+    {
+        return $this->country === 'AU' ? 'ABN' : 'GSTIN';
+    }
+
+    public function taxId(): ?string
+    {
+        return $this->country === 'AU' ? $this->abn : $this->gstin;
+    }
+
+    /** As printed on invoices; an ABN is grouped 2-3-3-3 (51 824 753 556). */
+    public function formattedTaxId(): ?string
+    {
+        $id = $this->taxId();
+
+        return $id && $this->country === 'AU'
+            ? preg_replace('/^(\d{2})(\d{3})(\d{3})(\d{3})$/', '$1 $2 $3 $4', $id)
+            : $id;
     }
 
     // ---- SaaS subscription -------------------------------------------------

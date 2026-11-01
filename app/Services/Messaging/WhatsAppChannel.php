@@ -3,6 +3,7 @@
 namespace App\Services\Messaging;
 
 use App\Models\Member;
+use App\Support\Country;
 use Illuminate\Support\Facades\Http;
 
 /** Meta WhatsApp Cloud API. */
@@ -29,7 +30,7 @@ class WhatsAppChannel extends Channel
             ->timeout(15)
             ->post(sprintf('https://graph.facebook.com/%s/%s/messages', config('gym.whatsapp.api_version'), $this->phoneNumberId()), [
                 'messaging_product' => 'whatsapp',
-                'to' => PhoneNumber::international($recipient),
+                'to' => PhoneNumber::international($recipient, Country::get($this->gym->country, 'phone_code')),
                 ...$message,
             ])
             ->throw();

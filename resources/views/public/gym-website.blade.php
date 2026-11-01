@@ -37,7 +37,7 @@
             'addressLocality' => $gym->city,
             'addressRegion' => $gym->state,
             'postalCode' => $gym->pincode,
-            'addressCountry' => $gym->currency === 'AUD' ? 'AU' : 'IN',
+            'addressCountry' => $gym->country,
         ]),
         'openingHoursSpecification' => $hours->reject(fn ($h) => $h['closed'] ?? false)->map(fn ($h) => [
             '@type' => 'OpeningHoursSpecification',
@@ -240,7 +240,7 @@
                                 <div class="per">for {{ $plan->duration_label }}</div>
                                 <p>
                                     {{ $plan->description ?: ($plan->max_persons > 1 ? 'For '.$plan->max_persons.' people.' : 'Full gym access.') }}
-                                    @if ($gym->isGstRegistered() && $plan->gst_rate > 0)<br><small>+ GST</small>@endif
+                                    @if ($gym->isGstRegistered() && $plan->gst_rate > 0)<br><small>{{ $gym->country === 'AU' ? 'incl. GST' : '+ GST' }}</small>@endif
                                 </p>
                                 <a class="btn btn-outline" href="{{ $joinUrl }}">Join with this plan</a>
                             </div>

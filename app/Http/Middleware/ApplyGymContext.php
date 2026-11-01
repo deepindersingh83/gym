@@ -8,6 +8,7 @@ use Closure;
 use Filament\Facades\Filament;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
+use Filament\Support\Facades\FilamentTimezone;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,6 +21,9 @@ class ApplyGymContext
 
         if ($gym instanceof Gym) {
             Tenancy::setGym($gym);
+
+            // Show dates and times in the gym's own time zone (stored values are unchanged).
+            FilamentTimezone::set($gym->timezone ?: config('app.timezone'));
 
             // Usage tracking for the platform owner; support visits by the super admin don't count.
             if (! $request->user()?->is_super_admin && (! $gym->last_activity_at || $gym->last_activity_at->lt(now()->subMinutes(5)))) {

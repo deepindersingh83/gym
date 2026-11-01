@@ -141,6 +141,21 @@ Owners enter their domain under **Gym settings → Website → Your own domain**
 - **Admin → Gyms → ⋮ → Record payment:** records what a gym paid you. Referred gyms automatically create the partner's commission. Pay commissions out under **Admin → Commissions**.
 - **Admin → Gym usage:** each gym marked Active, At risk or Inactive, with the reasons, last staff login and check-in trend.
 
+### India and Australia
+
+Each gym has a **country** (Gym settings → Details).
+
+| | India | Australia |
+| --- | --- | --- |
+| Currency | ₹ (INR) | $ (AUD) |
+| GST | Added to prices, split into CGST + SGST; needs a GSTIN | Included in prices (10%); needs an ABN and "Registered for GST" |
+| Tax invoice | GSTIN, SAC 999723, place of supply | ABN, "Total includes GST of $x" |
+| Mobile numbers | 98765 43210 | 0412 345 678 |
+| Payment methods | Cash, GPay, UPI, card, bank transfer, online (Razorpay) | Cash, card, bank transfer / PayID |
+| Time zone | IST | Sydney, Melbourne, Brisbane, Adelaide, Perth, Hobart or Darwin |
+
+The demo seeder includes an Australian gym: `owner.au@example.com` / `password`.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

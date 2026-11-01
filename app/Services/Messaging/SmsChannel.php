@@ -3,6 +3,7 @@
 namespace App\Services\Messaging;
 
 use App\Models\Member;
+use App\Support\Country;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -34,7 +35,7 @@ class SmsChannel extends Channel
                 'template_id' => $flowId,
                 'sender' => $this->gym->integration('msg91_sender', 'gym.sms.msg91_sender'),
                 'short_url' => '0',
-                'recipients' => [['mobiles' => PhoneNumber::international($recipient), ...$variables]],
+                'recipients' => [['mobiles' => PhoneNumber::international($recipient, Country::get($this->gym->country, 'phone_code')), ...$variables]],
             ]))
             ->throw();
     }

@@ -50,7 +50,7 @@ class ExpenseResource extends Resource
             Select::make('category')->options(ExpenseCategory::class)->required(),
             TextInput::make('amount')->numeric()->minValue(0.01)->prefix(Money::symbol())->required(),
             DatePicker::make('spent_on')->default(today())->required(),
-            Select::make('method')->label('Paid by')->options(PaymentMethod::class)->default(PaymentMethod::Cash->value)->required()
+            Select::make('method')->label('Paid by')->options(fn () => PaymentMethod::options())->default(PaymentMethod::Cash->value)->required()
                 ->helperText('Cash expenses are deducted in the day-end cash closing.'),
             Select::make('branch_id')->label('Branch')->options(fn () => GymOptions::branches())
                 ->default(fn () => Tenancy::branchId())->placeholder('Whole gym')

@@ -7,6 +7,7 @@ use App\Support\Tenancy;
 use Closure;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
+use Filament\Support\Facades\FilamentTimezone;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -21,6 +22,7 @@ class ApplyMemberContext
         abort_unless($member, 403, 'No member profile is linked to this account.');
 
         Tenancy::setGym($member->gym);
+        FilamentTimezone::set($member->gym->timezone ?: config('app.timezone'));
 
         if ($member->gym->primary_color) {
             FilamentColor::register(['primary' => Color::hex($member->gym->primary_color)]);

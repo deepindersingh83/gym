@@ -3,12 +3,16 @@
 @php
     $money = fn ($v) => \App\Support\Money::format($v, $gym->currency);
     $member = $subscription->member;
+    // India: GST added and split into CGST + SGST, with SAC codes. Australia: prices include GST.
+    $india = $gym->country !== 'AU';
+    $sac = $india && $gym->gstin;
+    $cols = $sac ? 2 : 1;
 @endphp
 
 @section('title', 'Invoice '.$subscription->invoice_number)
 
 @section('heading')
-    <h2>{{ $gym->gstin ? 'TAX INVOICE' : 'INVOICE' }}</h2>
+    <h2>{{ $gym->isGstRegistered() ? 'TAX INVOICE' : 'INVOICE' }}</h2>
     <div><strong>{{ $subscription->invoice_number }}</strong></div>
     <div class="muted">Date: {{ $subscription->created_at->format('d M Y') }}</div>
     <div style="margin-top: 6px">
@@ -36,7 +40,7 @@
                 @if ($subscription->additionalMembers->isNotEmpty())
                     <br>Also covers: {{ $subscription->additionalMembers->pluck('name')->implode(', ') }}
                 @endif
-                @if ($gym->gstin)<br><span class="muted">Place of supply: {{ $gym->state }} {{ $gym->state_code ? '('.$gym->state_code.')' : '' }}</span>@endif
+                @if ($sac)<br><span class="muted">Place of supply: {{ $gym->state }} {{ $gym->state_code ? '('.$gym->state_code.')' : '' }}</span>@endif
             </td>
         </tr>
     </table>
@@ -45,35 +49,37 @@
         <thead>
             <tr>
                 <th>Description</th>
-                @if ($gym->gstin)<th>SAC</th>@endif
+                @if ($sac)<th>SAC</th>@endif
                 <th class="num">Amount</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td>{{ $subscription->plan->name }} membership ({{ $subscription->plan->duration_label }})</td>
-                @if ($gym->gstin)<td>999723</td>@endif
+                @if ($sac)<td>999723</td>@endif
                 <td class="num">{{ $money($subscription->plan_price) }}</td>
             </tr>
             @if ($subscription->discount_amount > 0)
                 <tr>
                     <td>Discount{{ $subscription->coupon ? ' ('.$subscription->coupon->code.')' : '' }}</td>
-                    @if ($gym->gstin)<td></td>@endif
+                    @if ($sac)<td></td>@endif
                     <td class="num">− {{ $money($subscription->discount_amount) }}</td>
                 </tr>
             @endif
             @if ($subscription->admission_fee > 0)
                 <tr>
                     <td>Admission fee</td>
-                    @if ($gym->gstin)<td>999723</td>@endif
+                    @if ($sac)<td>999723</td>@endif
                     <td class="num">{{ $money($subscription->admission_fee) }}</td>
                 </tr>
             @endif
+            @if ($india)
             <tr>
-                <td class="num" colspan="{{ $gym->gstin ? 2 : 1 }}">Taxable value</td>
+                <td class="num" colspan="{{ $cols }}">Taxable value</td>
                 <td class="num">{{ $money($subscription->taxable_amount) }}</td>
             </tr>
-            @if ($subscription->gst_rate > 0)
+            @endif
+            @if ($india && $subscription->gst_rate > 0)
                 <tr>
                     <td class="num" colspan="2">CGST @ {{ (float) $subscription->gst_rate / 2 }}%</td>
                     <td class="num">{{ $money($subscription->cgst_amount) }}</td>
@@ -84,15 +90,21 @@
                 </tr>
             @endif
             <tr class="total">
-                <td class="num" colspan="{{ $gym->gstin ? 2 : 1 }}">Total</td>
+                <td class="num" colspan="{{ $cols }}">Total</td>
                 <td class="num">{{ $money($subscription->total_amount) }}</td>
             </tr>
+            @if (! $india && (float) $subscription->tax_amount > 0)
+                <tr>
+                    <td class="num muted" colspan="{{ $cols }}">Total includes GST of</td>
+                    <td class="num muted">{{ $money($subscription->tax_amount) }}</td>
+                </tr>
+            @endif
             <tr>
-                <td class="num" colspan="{{ $gym->gstin ? 2 : 1 }}">Paid</td>
+                <td class="num" colspan="{{ $cols }}">Paid</td>
                 <td class="num">{{ $money($subscription->amount_paid) }}</td>
             </tr>
             <tr>
-                <td class="num" colspan="{{ $gym->gstin ? 2 : 1 }}"><strong>Balance due</strong></td>
+                <td class="num" colspan="{{ $cols }}"><strong>Balance due</strong></td>
                 <td class="num"><strong>{{ $money($subscription->balance_due) }}</strong></td>
             </tr>
         </tbody>

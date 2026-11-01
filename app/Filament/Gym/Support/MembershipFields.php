@@ -7,6 +7,7 @@ use App\Models\Coupon;
 use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Services\SubscriptionService;
+use App\Support\Country;
 use App\Support\GymOptions;
 use App\Support\Money;
 use App\Support\Tenancy;
@@ -69,11 +70,11 @@ class MembershipFields
                     ->prefix(Money::symbol())
                     ->helperText('Enter less than the total for a part payment.'),
                 Select::make('payment_method')
-                    ->options(PaymentMethod::class)
+                    ->options(fn () => PaymentMethod::options())
                     ->default(PaymentMethod::Cash->value)
                     ->required(fn (Get $get) => (float) $get('amount_paid') > 0),
                 TextInput::make('payment_reference')
-                    ->label('UPI / transaction ref.')
+                    ->label(fn () => Country::isAustralia() ? 'Payment reference' : 'UPI / transaction ref.')
                     ->maxLength(100),
             ]),
         ];
@@ -116,12 +117,14 @@ class MembershipFields
             $parts[] = '− discount '.Money::format($quote['discount_amount']);
         }
 
-        if ($quote['gst_rate'] > 0) {
-            $parts[] = '+ GST '.(float) $quote['gst_rate'].'% '.Money::format($quote['cgst_amount'] + $quote['sgst_amount']);
+        if ($quote['gst_rate'] > 0 && ! $quote['tax_inclusive']) {
+            $parts[] = '+ GST '.(float) $quote['gst_rate'].'% '.Money::format($quote['tax_amount']);
         }
 
         $end = static::plan($get)->endDateFrom(Carbon::parse($get('start_date') ?? today()));
 
-        return implode(' ', $parts).' = Total '.Money::format($quote['total_amount']).' · Valid until '.$end->format('d M Y');
+        $includedGst = $quote['tax_inclusive'] && $quote['tax_amount'] > 0 ? ' (includes GST '.Money::format($quote['tax_amount']).')' : '';
+
+        return implode(' ', $parts).' = Total '.Money::format($quote['total_amount']).$includedGst.' · Valid until '.$end->format('d M Y');
     }
 }

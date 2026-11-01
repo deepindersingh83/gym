@@ -14,6 +14,7 @@ use App\Models\Measurement;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\WorkoutPlan;
+use App\Services\GymProvisioner;
 use App\Services\SubscriptionService;
 use App\Support\Tenancy;
 use Illuminate\Database\Seeder;
@@ -145,6 +146,44 @@ class DemoSeeder extends Seeder
 
             foreach ([[ExpenseCategory::Rent, 45000, 1], [ExpenseCategory::Salary, 60000, 1], [ExpenseCategory::Electricity, 8200, 5], [ExpenseCategory::Equipment, 15000, 12]] as [$category, $amount, $day]) {
                 Expense::create(['branch_id' => $main->id, 'category' => $category, 'amount' => $amount, 'spent_on' => today()->startOfMonth()->addDays($day - 1)->min(today()), 'method' => 'bank_transfer']);
+            }
+
+            auth()->logout();
+        });
+
+        $this->seedAustralianGym();
+    }
+
+    /** A Sydney gym: prices in A$ including 10% GST, ABN on invoices. Owner: owner.au@example.com */
+    protected function seedAustralianGym(): void
+    {
+        $owner = User::query()->firstOrCreate(['email' => 'owner.au@example.com'], ['name' => 'Mia Thompson', 'phone' => '0412 345 678', 'password' => 'password']);
+
+        $gym = app(GymProvisioner::class)->provision([
+            'name' => 'Bondi Strength',
+            'slug' => Gym::uniqueSlug('bondi-strength'),
+            'country' => 'AU',
+            'timezone' => 'Australia/Sydney',
+            'phone' => '02 9130 1234',
+            'email' => 'hello@bondistrength.example',
+            'address' => '12 Campbell Parade',
+            'city' => 'Bondi Beach',
+            'state' => 'NSW',
+            'pincode' => '2026',
+            'abn' => '51824753556',
+            'gst_registered' => true,
+            'opening_hours' => GymDetailsFields::defaultHours(),
+        ], $owner, ['monthly', 'quarterly', 'yearly']);
+
+        Tenancy::forGym($gym, function (Gym $gym) use ($owner) {
+            auth()->setUser($owner);
+            $service = app(SubscriptionService::class);
+            $plans = $gym->membershipPlans()->get();
+
+            foreach ([['Jack Wilson', '0423 111 222'], ['Chloe Nguyen', '0434 333 444'], ['Liam Patel', '0445 555 666']] as $i => [$name, $phone]) {
+                $member = Member::create(['name' => $name, 'phone' => $phone, 'gender' => $i % 2 ? 'female' : 'male', 'height_cm' => 170 + $i * 5]);
+                $subscription = $service->create($member, $plans[$i % $plans->count()], today()->subDays(10 * $i));
+                $service->recordPayment($subscription, (float) $subscription->total_amount, [PaymentMethod::Card, PaymentMethod::BankTransfer, PaymentMethod::Cash][$i]);
             }
 
             auth()->logout();

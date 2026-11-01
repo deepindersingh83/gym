@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Models\Gym;
+use App\Support\Country;
 use Filament\Support\Contracts\HasLabel;
 
 enum PaymentMethod: string implements HasLabel
@@ -12,6 +14,19 @@ enum PaymentMethod: string implements HasLabel
     case Card = 'card';
     case BankTransfer = 'bank_transfer';
     case Online = 'online';
+
+    /** @return array<string, string> Payment methods used in the gym's country (no UPI / GPay in Australia). */
+    public static function options(?Gym $gym = null): array
+    {
+        return collect(Country::get(Country::of($gym), 'payment_methods'))
+            ->mapWithKeys(fn (string $value) => [$value => self::from($value)->labelFor(Country::of($gym))])
+            ->all();
+    }
+
+    public function labelFor(string $country): string
+    {
+        return $country === 'AU' && $this === self::BankTransfer ? 'Bank transfer / PayID' : $this->getLabel();
+    }
 
     public function getLabel(): string
     {

@@ -3,6 +3,7 @@
 namespace App\Filament\Gym\Schemas;
 
 use App\Models\Gym;
+use App\Support\Country;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -12,6 +13,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 /** Form fields shared by the "register your gym" wizard and the gym settings page. */
 class GymDetailsFields
@@ -30,14 +33,30 @@ class GymDetailsFields
 
     public static function location(): array
     {
+        $isAu = fn (Get $get) => $get('country') === 'AU';
+
         return [
+            Grid::make(2)->schema([
+                Select::make('country')
+                    ->options(Country::options())
+                    ->default('IN')
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(fn (?string $state, Set $set) => $set('timezone', array_key_first(Country::get($state, 'timezones')))),
+                Select::make('timezone')
+                    ->label('Time zone')
+                    ->options(fn (Get $get) => Country::get($get('country'), 'timezones'))
+                    ->default('Asia/Kolkata')
+                    ->required(),
+            ]),
             Textarea::make('address')->rows(2),
             Grid::make(3)->schema([
-                TextInput::make('city'),
+                TextInput::make('city')->label(fn (Get $get) => $isAu($get) ? 'Suburb / city' : 'City'),
                 TextInput::make('state'),
-                TextInput::make('pincode')->maxLength(10),
+                TextInput::make('pincode')->label(fn (Get $get) => $isAu($get) ? 'Postcode' : 'PIN code')->maxLength(10),
             ]),
-            Grid::make(2)->schema([
+            // India: GSTIN, GST added to prices and split into CGST + SGST.
+            Grid::make(2)->visible(fn (Get $get) => ! $isAu($get))->schema([
                 TextInput::make('gstin')
                     ->label('GSTIN')
                     ->helperText('Leave empty if the gym is not GST registered. Invoices then show no GST.')
@@ -48,6 +67,18 @@ class GymDetailsFields
                     ->label('GST state code')
                     ->helperText('First two digits of the GSTIN, e.g. 27 for Maharashtra.')
                     ->maxLength(2),
+            ]),
+            // Australia: ABN; when registered for GST, prices include 10% GST.
+            Grid::make(2)->visible($isAu)->schema([
+                TextInput::make('abn')
+                    ->label('ABN')
+                    ->helperText('11 digits, shown on your invoices.')
+                    ->rule('regex:/^\d{2}\s?\d{3}\s?\d{3}\s?\d{3}$/')
+                    ->dehydrateStateUsing(fn (?string $state) => $state ? preg_replace('/\D/', '', $state) : null),
+                Toggle::make('gst_registered')
+                    ->label('Registered for GST')
+                    ->helperText('On: membership prices include 10% GST and invoices are tax invoices.')
+                    ->inline(false),
             ]),
         ];
     }

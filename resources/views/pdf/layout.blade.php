@@ -37,7 +37,7 @@
                     <div class="muted">
                         {{ collect([$gym->address, $gym->city, $gym->state, $gym->pincode])->filter()->implode(', ') }}<br>
                         {{ collect([$gym->phone, $gym->email])->filter()->implode(' · ') }}
-                        @if ($gym->gstin)<br>GSTIN: {{ $gym->gstin }}@endif
+                        @if ($gym->taxId())<br>{{ $gym->taxIdLabel() }}: {{ $gym->formattedTaxId() }}@endif
                     </div>
                 </td>
                 <td class="num" style="width: 200px">

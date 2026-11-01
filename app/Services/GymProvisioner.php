@@ -7,6 +7,7 @@ use App\Enums\PlanType;
 use App\Enums\StaffRole;
 use App\Models\Gym;
 use App\Models\User;
+use App\Support\Country;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,10 +19,8 @@ class GymProvisioner
 {
     /** Suggested starting prices; owners change them under Plans. */
     public const STARTER_PRICES = [
-        'monthly' => 1000,
-        'quarterly' => 2700,
-        'half_yearly' => 5000,
-        'yearly' => 9000,
+        'INR' => ['monthly' => 1000, 'quarterly' => 2700, 'half_yearly' => 5000, 'yearly' => 9000],
+        'AUD' => ['monthly' => 60, 'quarterly' => 165, 'half_yearly' => 300, 'yearly' => 550],
     ];
 
     /**
@@ -35,7 +34,9 @@ class GymProvisioner
 
             $gym->users()->attach($owner->id, ['role' => StaffRole::Owner->value, 'joined_on' => today()]);
 
-            foreach (array_intersect($starterPlans, array_keys(self::STARTER_PRICES)) as $type) {
+            $prices = self::STARTER_PRICES[$gym->currency] ?? self::STARTER_PRICES['INR'];
+
+            foreach (array_intersect($starterPlans, array_keys($prices)) as $type) {
                 $planType = PlanType::from($type);
                 [$value, $unit] = $planType->defaults();
 
@@ -44,8 +45,8 @@ class GymProvisioner
                     'type' => $planType,
                     'duration_value' => $value,
                     'duration_unit' => $unit,
-                    'price' => self::STARTER_PRICES[$type],
-                    'gst_rate' => 18,
+                    'price' => $prices[$type],
+                    'gst_rate' => Country::get($gym->country, 'tax_rate'),
                 ]);
             }
 

@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\Gyms\Pages\ListGyms;
 use App\Models\Gym;
 use App\Models\SaasPlan;
 use App\Services\Credits;
+use App\Support\Country;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -57,8 +58,11 @@ class GymResource extends Resource
                 TextInput::make('phone')->tel()->required()->maxLength(20),
                 TextInput::make('email')->email()->maxLength(120),
                 TextInput::make('whatsapp')->label('WhatsApp number')->tel()->maxLength(20),
-                TextInput::make('gstin')->label('GSTIN')->length(15)
+                Select::make('country')->options(Country::options())->default('IN')->required()->live(),
+                TextInput::make('gstin')->label('GSTIN')->length(15)->visible(fn ($get) => $get('country') !== 'AU')
                     ->dehydrateStateUsing(fn (?string $state) => $state ? strtoupper($state) : null),
+                TextInput::make('abn')->label('ABN')->visible(fn ($get) => $get('country') === 'AU')
+                    ->dehydrateStateUsing(fn (?string $state) => $state ? preg_replace('/\D/', '', $state) : null),
                 Textarea::make('address')->rows(2)->columnSpan(3),
                 TextInput::make('city'),
                 TextInput::make('state'),
