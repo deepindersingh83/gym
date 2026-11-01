@@ -2,6 +2,7 @@
 
 namespace App\Filament\Gym\Resources\Members;
 
+use App\Filament\Forms\Components\CameraPhoto;
 use App\Filament\Gym\Actions\MemberActions;
 use App\Filament\Gym\Concerns\ChecksGymAccess;
 use App\Filament\Gym\Resources\Members\Pages\CreateMember;
@@ -24,7 +25,6 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -100,15 +100,9 @@ class MemberResource extends Resource
     {
         return $schema->components([
             Section::make('Personal details')->columns(3)->schema([
-                FileUpload::make('photo_path')
+                CameraPhoto::make('photo_path')
                     ->label('Photo')
-                    ->image()
-                    ->avatar()
-                    ->imageEditor()
-                    ->disk('public')
                     ->directory(fn () => 'members/'.Tenancy::gymId())
-                    ->visibility('public')
-                    ->maxSize(4096)
                     ->columnSpanFull(),
                 TextInput::make('name')->required()->maxLength(120),
                 TextInput::make('phone')->tel()->required()->maxLength(20)->scopedUnique(ignoreRecord: true),

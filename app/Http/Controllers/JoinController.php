@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\CustomDomains;
 use App\Services\Payments\RazorpayService;
 use App\Support\Height;
+use App\Support\PhotoStore;
 use App\Support\Tenancy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,7 +71,11 @@ class JoinController extends Controller
             'health_questionnaire' => ['nullable', 'array'],
             'health_questionnaire.*' => [Rule::in(array_keys(MemberResource::HEALTH_QUESTIONS))],
             'medical_conditions' => ['nullable', 'string', 'max:1000'],
-            'photo' => ['nullable', 'image', 'max:4096'],
+            'photo_data' => ['nullable', 'string', function ($attribute, $value, $fail) {
+                if (! PhotoStore::isDataUrl($value) || ! PhotoStore::isValidImage($value)) {
+                    $fail('That photo could not be read. Please take or upload it again.');
+                }
+            }],
             'plan_id' => ['nullable', Rule::exists('membership_plans', 'id')->where('gym_id', $gym->id)->where('is_active', true)],
             'consent' => ['accepted'],
         ], ['phone.unique' => 'This phone number is already registered with the gym. Please contact the front desk.']);
@@ -87,7 +92,7 @@ class JoinController extends Controller
             throw ValidationException::withMessages(['email' => 'This email already has an account. Enter that account\'s password, or use another email.']);
         }
 
-        $member = DB::transaction(function () use ($data, $existing, $gym, $request) {
+        $member = DB::transaction(function () use ($data, $existing, $gym) {
             $user = $existing ?? User::create([
                 'name' => $data['name'],
                 'email' => strtolower($data['email']),
@@ -99,9 +104,9 @@ class JoinController extends Controller
                 'gym_id' => $gym->id,
                 'branch_id' => $gym->branches()->where('is_active', true)->orderBy('id')->value('id'),
                 'user_id' => $user->id,
-                'photo_path' => $request->file('photo')?->store("members/{$gym->id}", 'public'),
+                'photo_path' => filled($data['photo_data'] ?? null) ? PhotoStore::store($data['photo_data'], "members/{$gym->id}") : null,
                 'source' => 'online',
-                ...collect($data)->except(['password', 'photo', 'plan_id', 'consent'])->all(),
+                ...collect($data)->except(['password', 'photo_data', 'plan_id', 'consent'])->all(),
             ]);
         });
 

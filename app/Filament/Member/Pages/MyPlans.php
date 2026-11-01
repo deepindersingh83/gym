@@ -16,7 +16,7 @@ class MyPlans extends Page
 
     protected static ?string $title = 'Workout & diet';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     protected string $view = 'filament.member.my-plans';
 

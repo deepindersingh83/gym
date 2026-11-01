@@ -3,6 +3,7 @@
 namespace App\Filament\Gym\Resources\Staff;
 
 use App\Enums\StaffRole;
+use App\Filament\Forms\Components\CameraPhoto;
 use App\Filament\Gym\Concerns\ChecksGymAccess;
 use App\Filament\Gym\Resources\Staff\Pages\ManageStaff;
 use App\Models\GymUser;
@@ -13,7 +14,6 @@ use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -87,8 +87,7 @@ class StaffResource extends Resource
                 ->collapsed(fn (?GymUser $record) => ! $record?->show_on_website)
                 ->schema([
                     Toggle::make('show_on_website')->label('Show on website')->columnSpanFull(),
-                    FileUpload::make('photo_path')->label('Photo')->image()->avatar()->disk('public')
-                        ->directory(fn () => 'staff/'.Tenancy::gymId())->visibility('public')->maxSize(4096),
+                    CameraPhoto::make('photo_path')->label('Photo')->directory(fn () => 'staff/'.Tenancy::gymId())->columnSpanFull(),
                     TextInput::make('specialities')->placeholder('e.g. Strength, fat loss, mobility')->maxLength(150),
                     Textarea::make('bio')->rows(3)->maxLength(800)->columnSpanFull(),
                 ]),

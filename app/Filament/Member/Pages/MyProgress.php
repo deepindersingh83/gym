@@ -21,7 +21,7 @@ class MyProgress extends Page implements HasTable
 
     protected static ?string $title = 'My progress';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.gym.pages.table-page';
 

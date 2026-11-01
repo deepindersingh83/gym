@@ -7,6 +7,7 @@
     <style>
         :root { --brand: {{ $brand ?? '#f59e0b' }}; --ink: #111827; --muted: #6b7280; --line: #e5e7eb; --bg: #f9fafb; }
         * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
         body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.5; }
         a { color: inherit; }
         .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
@@ -29,6 +30,11 @@
         .alert { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; }
         table.hours td { padding: 2px 16px 2px 0; }
         .brandbar { height: 6px; background: var(--brand); }
+        .photo-box { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .photo-frame { width: 96px; height: 96px; border-radius: 14px; overflow: hidden; background: #f1f2f5; display: grid; place-items: center; font-size: 2rem; flex: none; }
+        .photo-frame video, .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .photo-actions .btn { padding: 9px 14px; font-size: .9rem; }
     </style>
 </head>
 <body>
@@ -36,5 +42,6 @@
     <div class="wrap">
         @yield('content')
     </div>
+    @stack('scripts')
 </body>
 </html>

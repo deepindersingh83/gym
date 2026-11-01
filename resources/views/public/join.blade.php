@@ -109,9 +109,24 @@
                         </select>
                     </div>
                     <div>
-                        <label for="photo">Photo</label>
-                        <input id="photo" name="photo" type="file" accept="image/*">
-                        @error('photo')<div class="error">{{ $message }}</div>@enderror
+                        <label>Photo</label>
+                        <div class="photo-box">
+                            <div class="photo-frame">
+                                <video id="photo-video" playsinline muted hidden></video>
+                                <img id="photo-preview" alt="" hidden>
+                                <span id="photo-empty">📷</span>
+                            </div>
+                            <div class="photo-actions">
+                                <button type="button" class="btn secondary" id="photo-take">Take photo</button>
+                                <button type="button" class="btn" id="photo-capture" hidden>Capture</button>
+                                <button type="button" class="btn secondary" id="photo-upload">Upload</button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="photo_data" id="photo-data">
+                        <input type="file" id="photo-file" accept="image/*" hidden>
+                        <input type="file" id="photo-camera" accept="image/*" capture="user" hidden>
+                        <div class="error" id="photo-error" hidden></div>
+                        @error('photo_data')<div class="error">{{ $message }}</div>@enderror
                     </div>
                     @if ($canPayOnline && $plans->isNotEmpty())
                         <div>
@@ -149,3 +164,56 @@
         @endif
     </div>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+    const $ = (id) => document.getElementById(id);
+    const video = $('photo-video'), preview = $('photo-preview'), empty = $('photo-empty');
+    let stream = null;
+
+    // Resize to at most 1000px and send as JPEG; the server re-checks and re-encodes it.
+    const toJpeg = (source, w, h) => {
+        const scale = Math.min(1, 1000 / Math.max(w, h));
+        const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(w * scale), height: Math.round(h * scale) });
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+    };
+    const show = (dataUrl) => {
+        $('photo-data').value = dataUrl;
+        preview.src = dataUrl; preview.hidden = false; empty.hidden = true; video.hidden = true;
+        $('photo-capture').hidden = true; $('photo-take').hidden = false;
+    };
+    const stop = () => { stream?.getTracks().forEach((t) => t.stop()); stream = null; };
+    const error = (text) => { $('photo-error').textContent = text; $('photo-error').hidden = ! text; };
+    const fromFile = (input) => {
+        const file = input.files?.[0]; input.value = '';
+        if (! file) return;
+        const img = new Image();
+        img.onload = () => { show(toJpeg(img, img.naturalWidth, img.naturalHeight)); URL.revokeObjectURL(img.src); };
+        img.onerror = () => error('That image could not be opened.');
+        img.src = URL.createObjectURL(file);
+    };
+
+    $('photo-take').addEventListener('click', async () => {
+        error('');
+        if (! navigator.mediaDevices?.getUserMedia) { $('photo-camera').click(); return; }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            video.srcObject = stream; await video.play();
+            video.hidden = false; preview.hidden = true; empty.hidden = true;
+            $('photo-capture').hidden = false; $('photo-take').hidden = true;
+        } catch (e) {
+            $('photo-camera').click();
+        }
+    });
+    $('photo-capture').addEventListener('click', () => { show(toJpeg(video, video.videoWidth, video.videoHeight)); stop(); });
+    $('photo-upload').addEventListener('click', () => $('photo-file').click());
+    $('photo-file').addEventListener('change', (e) => fromFile(e.target));
+    $('photo-camera').addEventListener('change', (e) => fromFile(e.target));
+    window.addEventListener('pagehide', stop);
+})();
+</script>
+@endpush
