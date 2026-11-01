@@ -4,12 +4,14 @@ namespace App\Filament\Gym\Pages\Tenancy;
 
 use App\Enums\MessageChannel;
 use App\Filament\Gym\Schemas\GymDetailsFields;
+use App\Filament\Gym\Support\UpgradeNotice;
 use App\Models\Gym;
 use App\Services\CustomDomains;
 use App\Services\MetaLeadAds;
 use App\Support\Access;
 use App\Support\Country;
 use App\Support\Height;
+use App\Support\Modules;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
@@ -61,7 +63,9 @@ class EditGymProfile extends EditTenantProfile
                 ]),
                 Tab::make('Opening hours')->schema(GymDetailsFields::openingHours()),
                 Tab::make('Website')->schema([
+                    UpgradeNotice::make('website'),
                     Section::make('Your gym website')
+                        ->visible(fn () => Modules::enabled('website'))
                         ->description(fn () => 'Live at '.$gym->websiteUrl())
                         ->columns(2)
                         ->schema([
@@ -82,8 +86,10 @@ class EditGymProfile extends EditTenantProfile
                             TextInput::make('website.facebook')->label('Facebook link')->url(),
                             TextInput::make('website.youtube')->label('YouTube link')->url(),
                         ]),
+                    UpgradeNotice::make('custom_domain'),
                     Section::make('Your own domain')
                         ->key('customDomain')
+                        ->visible(fn () => Modules::enabled('custom_domain'))
                         ->description(fn () => 'Show your website, signup page and member app on your own address, e.g. members.yourgym.com. Add a CNAME record for it pointing to '.CustomDomains::target().' at your domain provider.')
                         ->headerActions([
                             Action::make('checkDomain')
@@ -150,7 +156,9 @@ class EditGymProfile extends EditTenantProfile
                     ]),
                 ]),
                 Tab::make('Google reviews')->schema([
-                    Toggle::make('settings.review_request_enabled')->label('Ask happy members for a Google review')->live(),
+                    UpgradeNotice::make('google_reviews'),
+                    Toggle::make('settings.review_request_enabled')->label('Ask happy members for a Google review')->live()
+                        ->disabled(fn () => ! Modules::enabled('google_reviews')),
                     TextInput::make('settings.google_review_url')
                         ->label('Your Google review link')
                         ->url()
@@ -165,7 +173,7 @@ class EditGymProfile extends EditTenantProfile
                 Tab::make('Integrations')->schema([
                     Section::make('Razorpay (online payments and UPI AutoPay)')
                         // Razorpay is India only.
-                        ->visible(fn () => ! Country::isAustralia())
+                        ->visible(fn () => ! Country::isAustralia() && Modules::enabled('online_payments'))
                         ->description(fn () => 'Webhook URL: '.route('webhooks.razorpay', $gym).' — events: payment_link.paid, subscription.charged')
                         ->schema([
                             Grid::make(2)->schema([
@@ -193,8 +201,10 @@ class EditGymProfile extends EditTenantProfile
                                 TextInput::make('integrations.msg91_sender')->label('Sender ID'),
                             ]),
                         ]),
+                    UpgradeNotice::make('lead_ads'),
                     Section::make('Facebook & Instagram lead ads')
                         ->key('facebookLeads')
+                        ->visible(fn () => Modules::enabled('lead_ads'))
                         ->description('Leads from your Facebook and Instagram lead forms appear in Enquiries automatically.')
                         ->headerActions([
                             Action::make('connectFacebook')
@@ -221,6 +231,7 @@ class EditGymProfile extends EditTenantProfile
                         ]),
                     Section::make('Lead webhook (Zapier, Make, Pabbly)')
                         ->key('leadWebhook')
+                        ->visible(fn () => Modules::enabled('lead_ads'))
                         ->description('Send enquiries from any other tool to this address as JSON or a form post: name, phone, email, source, message.')
                         ->headerActions([
                             Action::make('leadWebhook')

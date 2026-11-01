@@ -39,6 +39,11 @@ class DietPlanResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    protected static function module(): ?string
+    {
+        return 'workout_diet';
+    }
+
     protected static function accessArea(): string
     {
         return 'fitness';

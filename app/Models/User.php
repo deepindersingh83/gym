@@ -113,7 +113,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             // Anyone who is not purely a gym member may open the gym panel; a new
             // owner without a gym yet is sent to the "register your gym" wizard.
             'gym' => $this->gyms()->wherePivot('is_active', true)->exists() || ! $this->memberProfiles()->exists(),
-            'member' => $this->memberProfiles()->exists(),
+            'member' => $this->memberProfiles()->with('gym.saasPlan')->get()->contains(fn ($member) => $member->gym?->hasModule('member_app')),
             'partner' => $this->partner()->where('is_active', true)->exists(),
             default => false,
         };

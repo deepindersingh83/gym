@@ -43,6 +43,11 @@ class WorkoutPlanResource extends Resource
         'fri' => 'Friday', 'sat' => 'Saturday', 'sun' => 'Sunday', 'any' => 'Any day',
     ];
 
+    protected static function module(): ?string
+    {
+        return 'workout_diet';
+    }
+
     protected static function accessArea(): string
     {
         return 'fitness';

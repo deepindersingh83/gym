@@ -112,6 +112,11 @@ class JoinController extends Controller
             ]);
         });
 
+        // Sign them straight in only when the gym's plan includes the member app.
+        if (! $gym->hasModule('member_app')) {
+            return redirect()->route('join.welcome', $gym);
+        }
+
         Auth::login($member->user);
 
         if (! empty($data['plan_id']) && RazorpayService::for($gym)->isConfigured()) {

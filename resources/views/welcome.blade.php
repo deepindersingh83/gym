@@ -168,6 +168,11 @@
         .price ul { list-style: none; padding: 0; margin: 0 0 26px; display: grid; gap: 10px; flex: 1; }
         .price li { font-size: .93rem; } .price li::before { content: "✓"; color: var(--lime); font-weight: 700; margin-right: 10px; }
 
+        .currency-switch { display: inline-flex; margin-top: 18px; border: 1px solid var(--line); border-radius: 999px; padding: 4px; background: rgba(255, 255, 255, .03); }
+        .currency-switch button { border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600; padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+        .currency-switch button[aria-pressed="true"] { background: var(--lime); color: #0b0c10; }
+        [hidden] { display: none !important; }
+
         /* faq */
         .faq { max-width: 820px; margin-inline: auto; display: grid; gap: 12px; }
         details { border: 1px solid var(--line); border-radius: 16px; background: var(--card); padding: 20px 24px; }
@@ -395,17 +400,34 @@
                         <div class="eyebrow">Simple pricing</div>
                         <h2>Start free. <span class="grad">Grow when you're ready.</span></h2>
                         <p>Every plan starts with a {{ $trialDays }}-day free trial. No card required.</p>
+                        <div class="currency-switch" role="group" aria-label="Currency">
+                            <button type="button" data-set-currency="INR" aria-pressed="true">₹ India</button>
+                            <button type="button" data-set-currency="AUD" aria-pressed="false">A$ Australia</button>
+                        </div>
                     </div>
                     <div class="prices">
                         @foreach ($plans as $plan)
                             <div class="price reveal {{ $loop->count > 1 && $loop->iteration === 2 ? 'hot' : '' }}">
                                 <h3>{{ $plan->name }}</h3>
-                                <div class="amt">₹{{ number_format((float) $plan->monthly_price) }}<small>/month</small></div>
-                                <div class="yr">or ₹{{ number_format((float) $plan->yearly_price) }} billed yearly</div>
+                                <div class="amt">
+                                    <span data-currency="INR">₹{{ number_format((float) $plan->monthly_price) }}</span>
+                                    <span data-currency="AUD" hidden>A${{ number_format((float) $plan->monthly_price_aud) }}</span><small>/month</small>
+                                </div>
+                                <div class="yr">
+                                    <span data-currency="INR">or ₹{{ number_format((float) $plan->yearly_price) }} billed yearly</span>
+                                    <span data-currency="AUD" hidden>or A${{ number_format((float) $plan->yearly_price_aud) }} billed yearly · prices include GST</span>
+                                </div>
                                 <ul>
                                     <li>{{ $plan->max_members ? number_format($plan->max_members).' members' : 'Unlimited members' }}</li>
                                     <li>{{ $plan->max_branches ? $plan->max_branches.' '.str('branch')->plural($plan->max_branches) : 'Unlimited branches' }}</li>
                                     <li>{{ $plan->max_staff ? $plan->max_staff.' staff logins' : 'Unlimited staff' }}</li>
+                                    @if ($plan->modules === null)
+                                        <li><strong>Every feature</strong></li>
+                                    @else
+                                        @foreach ($plan->modules as $module)
+                                            <li>{{ \App\Support\Modules::label($module) }}</li>
+                                        @endforeach
+                                    @endif
                                     @foreach ($plan->features ?? [] as $feature)
                                         <li>{{ $feature }}</li>
                                     @endforeach
@@ -488,6 +510,14 @@
                 });
             }, { threshold: 0.15 });
             document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+            // Prices in rupees or Australian dollars; Australian visitors start on A$.
+            const setCurrency = (code) => {
+                document.querySelectorAll('[data-currency]').forEach((el) => (el.hidden = el.dataset.currency !== code));
+                document.querySelectorAll('[data-set-currency]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.setCurrency === code));
+            };
+            document.querySelectorAll('[data-set-currency]').forEach((b) => b.addEventListener('click', () => setCurrency(b.dataset.setCurrency)));
+            if ((Intl.DateTimeFormat().resolvedOptions().timeZone || '').startsWith('Australia/')) setCurrency('AUD');
         })();
     </script>
 </body>

@@ -22,7 +22,9 @@ class CurrentMember
             return null;
         }
 
-        $profiles = $user->memberProfiles()->whereNull('deleted_at')->with('gym')->get();
+        // Only gyms whose plan includes the member app.
+        $profiles = $user->memberProfiles()->whereNull('deleted_at')->with('gym.saasPlan')->get()
+            ->filter(fn ($member) => $member->gym?->hasModule('member_app'))->values();
 
         // On a gym's own domain, show that gym's membership.
         $domainGymId = CustomDomains::current()?->id;

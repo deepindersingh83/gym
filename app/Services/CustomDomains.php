@@ -30,7 +30,9 @@ class CustomDomains
             ->where('custom_domain_status', 'active')
             ->value('id') ?? 0);
 
-        return $id ? Gym::query()->find($id) : null;
+        $gym = $id ? Gym::query()->find($id) : null;
+
+        return $gym?->hasModule('custom_domain') ? $gym : null;
     }
 
     public static function current(): ?Gym

@@ -82,6 +82,6 @@ class GymWebsiteController extends Controller
 
     protected function isPublic(Gym $gym): bool
     {
-        return $gym->hasActiveSaasSubscription() && $gym->websiteSetting('enabled', true);
+        return $gym->hasActiveSaasSubscription() && $gym->hasModule('website') && $gym->websiteSetting('enabled', true);
     }
 }

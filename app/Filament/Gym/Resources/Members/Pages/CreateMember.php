@@ -6,6 +6,7 @@ use App\Filament\Gym\Actions\MemberActions;
 use App\Filament\Gym\Resources\Members\MemberResource;
 use App\Filament\Gym\Support\MembershipFields;
 use App\Support\Access;
+use App\Support\Modules;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
@@ -29,6 +30,7 @@ class CreateMember extends CreateRecord
         return $schema->components([
             ...$schema->getComponents(),
             Section::make('Member app login')
+                ->visible(fn () => Modules::enabled('member_app'))
                 ->description('Optional. The member signs in at '.Filament::getPanel('member')->getLoginUrl().' with their mobile number and this password. No SMS or WhatsApp needed.')
                 ->collapsible()
                 ->schema([

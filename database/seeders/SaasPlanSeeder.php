@@ -3,11 +3,18 @@
 namespace Database\Seeders;
 
 use App\Models\SaasPlan;
+use App\Support\Modules;
 use Illuminate\Database\Seeder;
 
 /** The plans gym owners can buy. Prices and limits can be changed later in the admin panel. */
 class SaasPlanSeeder extends Seeder
 {
+    public const AUD_PRICES = [
+        'basic' => ['monthly_price_aud' => 29, 'yearly_price_aud' => 290],
+        'pro' => ['monthly_price_aud' => 59, 'yearly_price_aud' => 590],
+        'enterprise' => ['monthly_price_aud' => 149, 'yearly_price_aud' => 1490],
+    ];
+
     public function run(): void
     {
         $plans = [
@@ -21,7 +28,11 @@ class SaasPlanSeeder extends Seeder
 
         foreach ($plans as $plan) {
             // Only create missing plans, so re-running never overwrites prices changed in /admin.
-            SaasPlan::query()->firstOrCreate(['slug' => $plan['slug']], $plan);
+            SaasPlan::query()->firstOrCreate(['slug' => $plan['slug']], [
+                ...$plan,
+                'modules' => Modules::DEFAULTS[$plan['slug']] ?? null,
+                ...self::AUD_PRICES[$plan['slug']],
+            ]);
         }
     }
 }

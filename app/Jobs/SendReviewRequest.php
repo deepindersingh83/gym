@@ -22,7 +22,7 @@ class SendReviewRequest implements ShouldQueue
         $member = Member::withoutGlobalScopes()->with(['gym', 'user'])->find($this->memberId);
         $gym = $member?->gym;
 
-        if (! $gym || ! $gym->setting('review_request_enabled') || blank($gym->setting('google_review_url'))) {
+        if (! $gym || ! $gym->hasModule('google_reviews') || ! $gym->setting('review_request_enabled') || blank($gym->setting('google_review_url'))) {
             return;
         }
 

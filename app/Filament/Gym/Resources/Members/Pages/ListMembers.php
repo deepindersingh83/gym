@@ -5,6 +5,7 @@ namespace App\Filament\Gym\Resources\Members\Pages;
 use App\Filament\Gym\Resources\Members\MemberResource;
 use App\Models\Member;
 use App\Support\Access;
+use App\Support\Modules;
 use App\Support\SpreadsheetExport;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -22,7 +23,7 @@ class ListMembers extends ListRecords
                 ->label('Export to Excel')
                 ->icon(Heroicon::OutlinedArrowDownTray)
                 ->color('gray')
-                ->visible(fn () => Access::can('reports.view'))
+                ->visible(fn () => Access::can('reports.view') && Modules::enabled('exports'))
                 ->action(fn () => SpreadsheetExport::download(
                     'members-'.now()->format('Y-m-d').'.xlsx',
                     ['Member ID', 'Name', 'Phone', 'Email', 'Gender', 'Date of birth', 'Plan', 'Renewal date', 'Balance due', 'Trainer', 'Branch', 'Joined on'],

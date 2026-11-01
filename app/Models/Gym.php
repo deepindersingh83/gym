@@ -180,6 +180,16 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
         };
     }
 
+    /** Whether the gym's software plan includes a feature module (trials get everything unless turned off). */
+    public function hasModule(string $module): bool
+    {
+        if ($this->onTrial() && config('gym.billing.trial_full_access')) {
+            return true;
+        }
+
+        return $this->saasPlan === null || $this->saasPlan->includes($module);
+    }
+
     /** Whether the gym's SaaS plan allows one more members / branches / staff. */
     public function withinLimit(string $resource): bool
     {

@@ -5,6 +5,7 @@ namespace App\Filament\Gym\Resources\Payments\Pages;
 use App\Filament\Gym\Resources\Payments\PaymentResource;
 use App\Models\Payment;
 use App\Support\Access;
+use App\Support\Modules;
 use App\Support\SpreadsheetExport;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
@@ -21,7 +22,7 @@ class ListPayments extends ListRecords
                 ->label('Export to Excel')
                 ->icon(Heroicon::OutlinedArrowDownTray)
                 ->color('gray')
-                ->visible(fn () => Access::can('reports.view'))
+                ->visible(fn () => Access::can('reports.view') && Modules::enabled('exports'))
                 ->action(fn () => SpreadsheetExport::download(
                     'payments-'.now()->format('Y-m-d').'.xlsx',
                     ['Receipt', 'Date', 'Member', 'Phone', 'Invoice', 'Method', 'Reference', 'Amount', 'Received by', 'Branch'],

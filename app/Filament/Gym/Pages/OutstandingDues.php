@@ -9,6 +9,7 @@ use App\Filament\Gym\Resources\Members\MemberResource;
 use App\Models\Subscription;
 use App\Services\Messaging\Messenger;
 use App\Support\Access;
+use App\Support\Modules;
 use App\Support\Money;
 use App\Support\SpreadsheetExport;
 use App\Support\Tenancy;
@@ -104,6 +105,7 @@ class OutstandingDues extends Page implements HasTable
         return [
             Action::make('excel')
                 ->label('Excel')
+                ->visible(fn () => Modules::enabled('exports'))
                 ->icon(Heroicon::OutlinedTableCells)
                 ->color('gray')
                 ->action(fn () => SpreadsheetExport::download(
@@ -116,6 +118,7 @@ class OutstandingDues extends Page implements HasTable
                 )),
             Action::make('pdf')
                 ->label('PDF')
+                ->visible(fn () => Modules::enabled('exports'))
                 ->icon(Heroicon::OutlinedDocumentArrowDown)
                 ->color('gray')
                 ->action(function () {

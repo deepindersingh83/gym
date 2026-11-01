@@ -42,6 +42,11 @@ class BroadcastResource extends Resource
 
     public const AUDIENCES = ['active' => 'Members with an active membership', 'expired' => 'Members whose membership has expired', 'all' => 'All members'];
 
+    protected static function module(): ?string
+    {
+        return 'broadcasts';
+    }
+
     protected static function accessArea(): string
     {
         return 'messaging';

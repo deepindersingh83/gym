@@ -23,7 +23,7 @@ class Dashboard extends BaseDashboard
     protected function getHeaderActions(): array
     {
         $member = CurrentMember::get();
-        $online = RazorpayService::for($member->gym)->isConfigured();
+        $online = $member->gym->hasModule('online_payments') && RazorpayService::for($member->gym)->isConfigured();
 
         return [
             Action::make('payDues')

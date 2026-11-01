@@ -3,6 +3,7 @@
 namespace App\Filament\Gym\Concerns;
 
 use App\Support\Access;
+use App\Support\Modules;
 use App\Support\Tenancy;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,12 @@ use UnitEnum;
 trait ChecksGymAccess
 {
     abstract protected static function accessArea(): string;
+
+    /** Plan module the whole resource belongs to (see App\Support\Modules), if any. */
+    protected static function module(): ?string
+    {
+        return null;
+    }
 
     /** SaaS plan limit ("members", "branches" or "staff") that applies to creating records. */
     protected static function saasLimit(): ?string
@@ -39,6 +46,10 @@ trait ChecksGymAccess
         }
 
         $gym = Tenancy::gym();
+
+        if (($module = static::module()) && $gym && ! $gym->hasModule($module)) {
+            return Response::deny(Modules::label($module).' is not included in your plan. Upgrade to use it.');
+        }
 
         if ($ability !== 'view' && $gym && ! $gym->hasActiveSaasSubscription()) {
             return Response::deny('Your trial or plan has ended. Renew it to make changes.');

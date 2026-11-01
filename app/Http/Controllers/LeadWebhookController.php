@@ -39,7 +39,7 @@ class LeadWebhookController extends Controller
                 $value = $change['value'] ?? [];
                 $gym = Gym::query()->where('facebook_page_id', (string) ($value['page_id'] ?? ''))->first();
 
-                if (! $gym || blank($value['leadgen_id'] ?? null)) {
+                if (! $gym || blank($value['leadgen_id'] ?? null) || ! $gym->hasModule('lead_ads')) {
                     Log::info('Meta lead for an unknown page', ['page_id' => $value['page_id'] ?? null]);
 
                     continue;
@@ -57,7 +57,7 @@ class LeadWebhookController extends Controller
     public function generic(Request $request, string $token): JsonResponse
     {
         $gym = Gym::query()->where('lead_webhook_token', $token)->first();
-        abort_unless($gym && $gym->hasActiveSaasSubscription(), 404);
+        abort_unless($gym && $gym->hasActiveSaasSubscription() && $gym->hasModule('lead_ads'), 404);
 
         $data = $request->all();
         $name = Arr::first([$data['name'] ?? null, $data['full_name'] ?? null, trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''))], fn ($v) => filled($v));

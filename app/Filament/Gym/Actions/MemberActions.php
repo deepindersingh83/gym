@@ -18,6 +18,7 @@ use App\Services\Messaging\PhoneNumber;
 use App\Services\SubscriptionService;
 use App\Support\Access;
 use App\Support\Country;
+use App\Support\Modules;
 use App\Support\Money;
 use App\Support\Tenancy;
 use Filament\Actions\Action;
@@ -134,7 +135,7 @@ class MemberActions
             ->label(fn (Member $record) => $record->user_id ? 'Resend member app invite' : 'Invite to member app')
             ->icon(Heroicon::OutlinedDevicePhoneMobile)
             ->color('gray')
-            ->visible(fn () => Access::can('members.edit'))
+            ->visible(fn () => Access::can('members.edit') && Modules::enabled('member_app'))
             // Phone-only members are invited by WhatsApp / SMS, which needs a provider.
             ->disabled(fn (Member $record) => blank($record->email) && ! LoginCodes::isAvailable(Tenancy::gym()))
             ->tooltip(fn (Member $record) => blank($record->email) && ! LoginCodes::isAvailable(Tenancy::gym())
@@ -176,7 +177,7 @@ class MemberActions
             ->label('Set app password')
             ->icon(Heroicon::OutlinedKey)
             ->color('gray')
-            ->visible(fn () => Access::can('members.edit'))
+            ->visible(fn () => Access::can('members.edit') && Modules::enabled('member_app'))
             ->modalDescription(fn (Member $record) => "{$record->name} signs in at ".Filament::getPanel('member')->getLoginUrl()." with mobile number {$record->phone} and this password.")
             ->schema([
                 TextInput::make('password')->password()->revealable()->required()->minLength(8)

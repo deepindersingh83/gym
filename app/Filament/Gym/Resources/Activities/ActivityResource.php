@@ -43,6 +43,11 @@ class ActivityResource extends Resource
 
     protected static ?int $navigationSort = 9;
 
+    protected static function module(): ?string
+    {
+        return 'audit_log';
+    }
+
     protected static function accessArea(): string
     {
         return 'audit';

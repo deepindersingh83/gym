@@ -6,6 +6,7 @@ use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
 use App\Services\Payments\RazorpayService;
 use App\Support\Access;
+use App\Support\Modules;
 use App\Support\Tenancy;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -34,7 +35,7 @@ class SubscriptionActions
             ->label('Send payment link')
             ->icon(Heroicon::OutlinedLink)
             ->color('gray')
-            ->visible(fn (Subscription $record) => Access::can('payments.create') && $record->balance_due > 0)
+            ->visible(fn (Subscription $record) => Access::can('payments.create') && $record->balance_due > 0 && Modules::enabled('online_payments'))
             ->requiresConfirmation()
             ->modalDescription('Razorpay sends the member an SMS (and email) with a link to pay the balance by UPI, card or net banking. The payment is recorded here automatically.')
             ->action(function (Subscription $record): void {
@@ -53,7 +54,7 @@ class SubscriptionActions
             ->label(fn (Subscription $record) => $record->auto_renew ? 'Stop UPI AutoPay' : 'Set up UPI AutoPay')
             ->icon(Heroicon::OutlinedArrowPathRoundedSquare)
             ->color('gray')
-            ->visible(fn (Subscription $record) => Access::can('subscriptions.edit') && $record->status === SubscriptionStatus::Active)
+            ->visible(fn (Subscription $record) => Access::can('subscriptions.edit') && $record->status === SubscriptionStatus::Active && Modules::enabled('online_payments'))
             ->requiresConfirmation()
             ->modalDescription(fn (Subscription $record) => $record->auto_renew
                 ? 'Future renewals will no longer be charged automatically.'
