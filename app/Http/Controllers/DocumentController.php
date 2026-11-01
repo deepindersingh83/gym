@@ -53,7 +53,8 @@ class DocumentController extends Controller
     {
         $user = $request->user();
 
-        if ($user->is_super_admin) {
+        // Platform support (and finance, for invoices) can open any gym's documents.
+        if (AdminAccess::can('gyms.open', $user) || AdminAccess::can('payments', $user)) {
             return;
         }
 

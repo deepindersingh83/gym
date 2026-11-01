@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Gyms\GymResource;
 use App\Filament\Admin\Widgets\GymHealthStats;
 use App\Models\Gym;
 use App\Services\GymHealth;
+use App\Support\AdminAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -21,6 +22,11 @@ use Illuminate\Database\Eloquent\Builder;
 /** Which gyms use the software, which have gone quiet, and which may cancel. */
 class Usage extends Page implements HasTable
 {
+    public static function canAccess(): bool
+    {
+        return AdminAccess::can('usage');
+    }
+
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartLine;

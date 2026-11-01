@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Gyms\Pages;
 use App\Filament\Admin\Resources\Gyms\GymResource;
 use App\Models\User;
 use App\Services\GymProvisioner;
+use App\Support\AdminLog;
 use Filament\Auth\Notifications\ResetPassword;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -41,6 +42,7 @@ class CreateGym extends CreateRecord
         ]);
 
         $gym = app(GymProvisioner::class)->provision($data, $owner, $starterPlans);
+        AdminLog::record('Added gym', $gym, ['owner' => $owner->email]);
 
         if ($isNewOwner && blank($ownerData['password'] ?? null)) {
             $this->sendSetPasswordLink($owner);

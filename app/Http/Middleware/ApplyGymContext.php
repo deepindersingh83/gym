@@ -26,7 +26,7 @@ class ApplyGymContext
             FilamentTimezone::set($gym->timezone ?: config('app.timezone'));
 
             // Usage tracking for the platform owner; support visits by the super admin don't count.
-            if (! $request->user()?->is_super_admin && (! $gym->last_activity_at || $gym->last_activity_at->lt(now()->subMinutes(5)))) {
+            if (! $request->user()?->isPlatformAdmin() && (! $gym->last_activity_at || $gym->last_activity_at->lt(now()->subMinutes(5)))) {
                 $gym->forceFill(['last_activity_at' => now()])->saveQuietly();
             }
 

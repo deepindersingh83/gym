@@ -133,6 +133,11 @@ return [
         ],
     ],
 
+    // Platform admin team.
+    'admin' => [
+        'require_two_factor' => (bool) env('ADMIN_REQUIRE_2FA', true),
+    ],
+
     'support' => [
         'email' => env('SUPPORT_EMAIL'),
         'phone' => env('SUPPORT_PHONE'),

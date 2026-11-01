@@ -80,7 +80,7 @@ class Tenancy
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->is_super_admin && static::gym() !== null;
+        return $user instanceof User && static::gym() !== null && AdminAccess::can('gyms.open', $user);
     }
 
     /**

@@ -169,6 +169,21 @@ Gym owners see **Setup → Plan & billing**: their plan, usage against limits, w
   - Fill in your company details under **Platform settings → Your company**. If you leave the GSTIN or ABN empty, no GST is charged.
 - **Reminders and lock:** owners get emails before the end date (on the days set in settings), on the day it ends, and on the last day of the grace period. After the grace period, changes are locked until they pay. This runs daily via `gym:billing-reminders`; the CloudPanel cron already covers it.
 
+## Admin team
+
+You can add people under **Admin → Platform → Admin team**. Each person gets one role:
+
+| Role | Can do |
+| --- | --- |
+| Owner | Everything, including settings, plans and the admin team |
+| Support | Open any gym's panel to help, extend trials, reset owner passwords, add credits, suspend |
+| Sales | Gyms, trials, partners, discount codes |
+| Finance | Software payments, invoices, commissions, revenue. Cannot open gym panels |
+
+- **Two-step login with an authenticator app is required for every admin.** Each person is asked to set it up the first time they sign in.
+- **Lost phone:** another owner can use "Reset two-step login" on the Admin team page. On the server, you can also run `php artisan gym:reset-2fa you@example.com`.
+- **Admin log:** **Admin log** records who did what, such as extended trials, recorded payments, credits, suspensions, settings changes and team changes. These entries are not shown in the gym's own audit log.
+
 ## Integrations (per gym, under Gym settings → Integrations)
 
 - **Razorpay:** each gym adds its own keys, so money goes to that gym's account. Set the webhook URL shown on the settings page with the events `payment_link.paid` and `subscription.charged`, and paste in its webhook secret. Payment links settle dues or renew memberships automatically. UPI AutoPay charges each renewal and creates the next membership.

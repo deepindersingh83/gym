@@ -13,6 +13,7 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Support\AdminLog;
 use App\Support\GymOptions;
 use BackedEnum;
 use Filament\Actions\ViewAction;
@@ -24,6 +25,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 /** Who created, changed or deleted what, and when. */
@@ -32,6 +34,12 @@ class ActivityResource extends Resource
     use ChecksGymAccess;
 
     protected static ?string $model = Activity::class;
+
+    /** Platform staff actions are recorded in the admin log, not the gym's own audit log. */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where(fn ($q) => $q->whereNull('log_name')->orWhere('log_name', '!=', AdminLog::NAME));
+    }
 
     protected static ?string $navigationLabel = 'Audit log';
 

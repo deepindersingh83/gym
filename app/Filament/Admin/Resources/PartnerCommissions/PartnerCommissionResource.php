@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\PartnerCommissions;
 
 use App\Filament\Admin\Resources\PartnerCommissions\Pages\ListPartnerCommissions;
 use App\Models\PartnerCommission;
+use App\Support\AdminAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -19,6 +20,11 @@ use UnitEnum;
 
 class PartnerCommissionResource extends Resource
 {
+    public static function canViewAny(): bool
+    {
+        return AdminAccess::can('commissions');
+    }
+
     protected static ?string $model = PartnerCommission::class;
 
     protected static ?string $navigationLabel = 'Commissions';

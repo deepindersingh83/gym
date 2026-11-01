@@ -10,6 +10,7 @@ use App\Models\Gym;
 use App\Models\SaasPlan;
 use App\Services\Billing\GymBilling;
 use App\Services\Credits;
+use App\Support\AdminAccess;
 use App\Support\AdminLog;
 use App\Support\Country;
 use App\Support\Money;
@@ -34,6 +35,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /** Every gym on the platform, with its SaaS plan, trial and status. */
 class GymResource extends Resource
@@ -41,6 +43,31 @@ class GymResource extends Resource
     protected static ?string $model = Gym::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
+
+    public static function canViewAny(): bool
+    {
+        return AdminAccess::can('gyms.view');
+    }
+
+    public static function canCreate(): bool
+    {
+        return AdminAccess::can('gyms.create');
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return AdminAccess::can('gyms.edit');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return AdminAccess::can('gyms.delete');
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        return AdminAccess::can('gyms.delete');
+    }
 
     public const STATUSES = ['trial' => 'Trial', 'active' => 'Active (paying)', 'suspended' => 'Suspended', 'cancelled' => 'Cancelled'];
 
@@ -156,18 +183,21 @@ class GymResource extends Resource
                     ->label('Open')
                     ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                     ->url(fn (Gym $record) => Filament::getPanel('gym')->getUrl($record), shouldOpenInNewTab: true)
-                    ->hidden(fn (Gym $record) => $record->trashed()),
+                    ->hidden(fn (Gym $record) => $record->trashed() || ! AdminAccess::can('gyms.open')),
                 ActionGroup::make([
                     Action::make('extendTrial')
+                        ->visible(fn () => AdminAccess::can('gyms.trial'))
                         ->label('Extend trial')
                         ->icon(Heroicon::OutlinedClock)
                         ->schema([TextInput::make('days')->numeric()->minValue(1)->default(14)->required()])
                         ->action(function (Gym $record, array $data) {
                             $from = $record->trial_ends_at?->isFuture() ? $record->trial_ends_at : now();
                             $record->update(['status' => 'trial', 'trial_ends_at' => $from->copy()->addDays((int) $data['days'])]);
+                            AdminLog::record('Extended trial', $record, ['days' => (int) $data['days'], 'until' => $record->trial_ends_at->toDateString()]);
                             Notification::make()->title('Trial extended to '.$record->trial_ends_at->format('d M Y'))->success()->send();
                         }),
                     Action::make('activate')
+                        ->visible(fn () => AdminAccess::can('gyms.payment'))
                         ->label('Record payment')
                         ->icon(Heroicon::OutlinedBanknotes)
                         ->schema([
@@ -197,6 +227,7 @@ class GymResource extends Resource
                                 ->success()->send();
                         }),
                     Action::make('credits')
+                        ->visible(fn () => AdminAccess::can('gyms.credits'))
                         ->label('Adjust message credits')
                         ->icon(Heroicon::OutlinedCircleStack)
                         ->schema([
@@ -205,9 +236,11 @@ class GymResource extends Resource
                         ])
                         ->action(function (Gym $record, array $data) {
                             app(Credits::class)->add($record, (int) $data['credits'], 'adjustment', $data['reason']);
+                            AdminLog::record('Adjusted message credits', $record, ['credits' => (int) $data['credits'], 'reason' => $data['reason']]);
                             Notification::make()->title('Balance is now '.number_format($record->message_credits).' credits')->success()->send();
                         }),
                     Action::make('ownerPassword')
+                        ->visible(fn () => AdminAccess::can('gyms.owner_password'))
                         ->label('Set owner password')
                         ->icon(Heroicon::OutlinedKey)
                         ->color('gray')
@@ -222,7 +255,31 @@ class GymResource extends Resource
                         ->action(function (Gym $record, array $data) {
                             $owner = $record->users()->wherePivot('role', StaffRole::Owner->value)->findOrFail($data['user_id']);
                             $owner->update(['password' => $data['password']]);
+                            AdminLog::record('Set the owner password', $record, ['owner' => $owner->email]);
                             Notification::make()->title("Password updated for {$owner->email}")->success()->send();
+                        }),
+                    Action::make('suspend')
+                        ->label('Suspend')
+                        ->icon(Heroicon::OutlinedNoSymbol)
+                        ->color('danger')
+                        ->visible(fn (Gym $record) => AdminAccess::can('gyms.suspend') && $record->status !== 'suspended' && ! $record->trashed())
+                        ->modalDescription('Staff can still sign in and view their data, but cannot make changes. Members and the website are not affected.')
+                        ->schema([TextInput::make('reason')->label('Reason (shown to the gym)')->required()->maxLength(200)->placeholder('e.g. Payment disputed')])
+                        ->action(function (Gym $record, array $data) {
+                            $record->update(['status' => 'suspended', 'suspension_reason' => $data['reason']]);
+                            AdminLog::record('Suspended gym', $record, ['reason' => $data['reason']]);
+                            Notification::make()->title("{$record->name} is suspended")->success()->send();
+                        }),
+                    Action::make('unsuspend')
+                        ->label('Lift suspension')
+                        ->icon(Heroicon::OutlinedCheckCircle)
+                        ->visible(fn (Gym $record) => AdminAccess::can('gyms.suspend') && $record->status === 'suspended')
+                        ->requiresConfirmation()
+                        ->action(function (Gym $record) {
+                            $status = $record->subscription_ends_at ? 'active' : 'trial';
+                            $record->update(['status' => $status, 'suspension_reason' => null]);
+                            AdminLog::record('Lifted suspension', $record);
+                            Notification::make()->title("{$record->name} is {$status} again")->success()->send();
                         }),
                     EditAction::make(),
                 ]),

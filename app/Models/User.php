@@ -5,7 +5,12 @@ namespace App\Models;
 use App\Enums\AdminRole;
 use App\Enums\StaffRole;
 use App\Services\Messaging\PhoneNumber;
+use App\Support\AdminAccess;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
@@ -22,10 +27,10 @@ use Illuminate\Support\Collection;
 
 #[Fillable(['name', 'email', 'phone', 'password'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasTenants
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasTenants
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -38,6 +43,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
+            'last_login_at' => 'datetime',
             'admin_role' => AdminRole::class,
         ];
     }
@@ -122,14 +128,14 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     public function getTenants(Panel $panel): Collection
     {
         // The super admin can switch into any gym to help it.
-        return $this->is_super_admin
+        return AdminAccess::can('gyms.open', $this)
             ? Gym::query()->orderBy('name')->get()
             : $this->gyms()->wherePivot('is_active', true)->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
     {
-        return $this->is_super_admin
+        return AdminAccess::can('gyms.open', $this)
             || $this->gyms()->whereKey($tenant->getKey())->wherePivot('is_active', true)->exists();
     }
 }

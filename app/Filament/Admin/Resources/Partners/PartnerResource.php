@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Partners\Pages\CreatePartner;
 use App\Filament\Admin\Resources\Partners\Pages\EditPartner;
 use App\Filament\Admin\Resources\Partners\Pages\ListPartners;
 use App\Models\Partner;
+use App\Support\AdminAccess;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
@@ -24,6 +25,11 @@ use UnitEnum;
 /** Resellers and affiliates who refer gyms for a commission. */
 class PartnerResource extends Resource
 {
+    public static function canViewAny(): bool
+    {
+        return AdminAccess::can('partners');
+    }
+
     protected static ?string $model = Partner::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

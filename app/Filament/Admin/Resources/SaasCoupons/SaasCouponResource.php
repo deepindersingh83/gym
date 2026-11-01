@@ -28,6 +28,8 @@ class SaasCouponResource extends Resource
 {
     protected static ?string $model = SaasCoupon::class;
 
+    protected static ?string $slug = 'discount-codes';
+
     protected static ?string $navigationLabel = 'Discount codes';
 
     protected static ?string $modelLabel = 'discount code';

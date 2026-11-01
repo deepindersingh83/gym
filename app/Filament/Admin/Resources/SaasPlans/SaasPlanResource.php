@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\SaasPlans;
 
 use App\Filament\Admin\Resources\SaasPlans\Pages\ManageSaasPlans;
 use App\Models\SaasPlan;
+use App\Support\AdminAccess;
 use App\Support\Modules;
 use BackedEnum;
 use Filament\Actions\EditAction;
@@ -22,6 +23,11 @@ use Filament\Tables\Table;
 /** Plans the SaaS sells to gym owners (Basic, Pro, Enterprise) and their limits. */
 class SaasPlanResource extends Resource
 {
+    public static function canViewAny(): bool
+    {
+        return AdminAccess::can('plans');
+    }
+
     protected static ?string $model = SaasPlan::class;
 
     protected static ?string $navigationLabel = 'Software plans';

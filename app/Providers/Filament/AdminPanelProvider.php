@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\RequireAdminTwoFactor;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -29,6 +31,9 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->passwordReset()
             ->profile()
+            // Every admin must use an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password...).
+            ->multiFactorAuthentication([AppAuthentication::make()->recoverable()], isRequired: true)
+            ->multiFactorAuthenticationRequiredMiddlewareName(RequireAdminTwoFactor::class)
             ->brandName(config('app.name').' Admin')
             ->colors([
                 'primary' => Color::Indigo,

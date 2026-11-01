@@ -31,6 +31,8 @@ class Settings extends Page
 
     protected static ?string $title = 'Platform settings';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Platform';
+
     protected static ?int $navigationSort = 90;
 
     protected string $view = 'filament.admin.pages.settings';

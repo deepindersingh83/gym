@@ -21,7 +21,7 @@ class MakeSuperAdmin extends Command
             $user->password = $this->secret('Password (min 8 characters)') ?: throw new RuntimeException('A password is required.');
         }
 
-        $user->forceFill(['is_super_admin' => true])->save();
+        $user->forceFill(['is_super_admin' => true, 'admin_role' => 'owner'])->save();
         $this->info("{$user->email} is now a super admin. Sign in at ".url('/admin'));
 
         return self::SUCCESS;
