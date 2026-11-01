@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Enums\MessageChannel;
 use App\Enums\MessageEvent;
+use App\Models\Gym;
 use App\Models\User;
 use App\Services\Messaging\Messenger;
+use App\Services\Messaging\SmsChannel;
+use App\Services\Messaging\WhatsAppChannel;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +24,26 @@ class LoginCodes
     public const TTL_MINUTES = 10;
 
     public const MAX_ATTEMPTS = 5;
+
+    /**
+     * Whether codes can be sent: the platform's WhatsApp or SMS account is set up
+     * (every gym can then send codes, free of credits), or this gym has its own.
+     */
+    public static function isAvailable(?Gym $gym = null): bool
+    {
+        if ($gym) {
+            return (new WhatsAppChannel($gym))->isConfigured() || (new SmsChannel($gym))->isConfigured();
+        }
+
+        return (filled(config('gym.whatsapp.token')) && filled(config('gym.whatsapp.phone_number_id')))
+            || filled(config('gym.sms.msg91_auth_key'));
+    }
+
+    /** Where code sign-in is offered: the gym's own domain, else the platform as a whole. */
+    public static function isOffered(): bool
+    {
+        return static::isAvailable(CustomDomains::current());
+    }
 
     /**
      * Sends a code if the number belongs to a member. Returns false only when

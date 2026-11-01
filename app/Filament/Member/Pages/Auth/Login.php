@@ -3,6 +3,7 @@
 namespace App\Filament\Member\Pages\Auth;
 
 use App\Models\User;
+use App\Services\LoginCodes;
 use Filament\Actions\Action;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Forms\Components\TextInput;
@@ -43,7 +44,10 @@ class Login extends BaseLogin
 
     public function getSubheading(): string|Htmlable|null
     {
-        return new HtmlString('No password? '.$this->codeLoginAction->toHtml());
+        // Without WhatsApp / SMS there are no codes; the gym sets passwords at the desk.
+        return LoginCodes::isOffered()
+            ? new HtmlString('No password? '.$this->codeLoginAction->toHtml())
+            : 'Forgot your password? Ask your gym\'s front desk to set a new one.';
     }
 
     public function codeLoginAction(): Action

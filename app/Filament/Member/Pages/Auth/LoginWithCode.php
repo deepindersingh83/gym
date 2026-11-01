@@ -26,6 +26,10 @@ class LoginWithCode extends SimplePage
             $this->redirect(Filament::getUrl());
         }
 
+        if (! LoginCodes::isOffered()) {
+            $this->redirect(Filament::getLoginUrl());
+        }
+
         $this->form->fill();
     }
 

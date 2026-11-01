@@ -12,11 +12,13 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\LoginCodes;
 use App\Services\Messaging\Messenger;
 use App\Services\Messaging\PhoneNumber;
 use App\Services\SubscriptionService;
 use App\Support\Access;
 use App\Support\Money;
+use App\Support\Tenancy;
 use Filament\Actions\Action;
 use Filament\Auth\Notifications\ResetPassword;
 use Filament\Facades\Filament;
@@ -132,6 +134,11 @@ class MemberActions
             ->icon(Heroicon::OutlinedDevicePhoneMobile)
             ->color('gray')
             ->visible(fn () => Access::can('members.edit'))
+            // Phone-only members are invited by WhatsApp / SMS, which needs a provider.
+            ->disabled(fn (Member $record) => blank($record->email) && ! LoginCodes::isAvailable(Tenancy::gym()))
+            ->tooltip(fn (Member $record) => blank($record->email) && ! LoginCodes::isAvailable(Tenancy::gym())
+                ? 'No WhatsApp or SMS is set up and this member has no email. Use "Set app password" instead.'
+                : null)
             ->requiresConfirmation()
             ->modalDescription(fn (Member $record) => filled($record->email)
                 ? "We'll email {$record->email} a link to set a password. They can also sign in with their mobile number and a one-time code."

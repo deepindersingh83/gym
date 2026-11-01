@@ -123,7 +123,8 @@ Owners enter their domain under **Gym settings → Website → Your own domain**
 
 ### Member app sign-in
 
-- Members sign in at `/member` with their **mobile number (or email) and password**, or tap **Sign in with a one-time code** to get a 6-digit code by WhatsApp (SMS if WhatsApp fails). Codes expire after 10 minutes, lock after 5 wrong tries, are rate limited, don't use message credits, and are hidden in Sent messages.
+- Members sign in at `/member` with their **mobile number (or email) and password**. This needs no SMS or WhatsApp. Staff can set the password when adding a member (**Member app login**) or later with **Set app password**.
+- When the platform has WhatsApp or SMS set up (`WHATSAPP_*` / `MSG91_*`), every gym also gets **Sign in with a one-time code**. Codes are free for gyms; they don't need credits or their own subscription. A gym with its own WhatsApp/SMS account also gets codes on its own domain. Without any provider, the code option is hidden and the login page tells members to ask the front desk. Members tap **Sign in with a one-time code** to get a 6-digit code by WhatsApp (SMS if WhatsApp fails). Codes expire after 10 minutes, lock after 5 wrong tries, are rate limited, don't use message credits, and are hidden in Sent messages.
 - Staff give a member access from the member's page: **Invite to member app** (email link, or WhatsApp/SMS if they have no email) or **Set app password** at the desk. Online signup doesn't need an email.
 - WhatsApp only allows business-started messages from approved templates. Create an **Authentication** template in Meta, then enter its name for the "Member app login code" event under **Messaging → Message templates**. Do the same with a DLT template for SMS.
 
