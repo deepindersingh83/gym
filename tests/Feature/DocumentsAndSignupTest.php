@@ -62,9 +62,16 @@ class DocumentsAndSignupTest extends TestCase
         $gym = $this->createGym();
         User::factory()->create(['email' => 'taken@example.com']);
 
+        User::factory()->create(['email' => null, 'phone' => '98111 00001']);
+
         $this->post(route('join.store', $gym), [
             'name' => 'Someone', 'phone' => '9811100000', 'email' => 'taken@example.com', 'password' => 'wrong-password', 'consent' => '1',
-        ])->assertSessionHasErrors('email');
+        ])->assertSessionHasErrors('password');
+
+        // Same mobile number written differently is still the same login.
+        $this->post(route('join.store', $gym), [
+            'name' => 'Someone', 'phone' => '+91 9811100001', 'password' => 'wrong-password', 'consent' => '1',
+        ])->assertSessionHasErrors('password');
 
         $this->assertSame(0, Member::withoutGlobalScopes()->count());
     }

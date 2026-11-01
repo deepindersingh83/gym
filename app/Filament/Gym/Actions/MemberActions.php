@@ -2,6 +2,7 @@
 
 namespace App\Filament\Gym\Actions;
 
+use App\Enums\MessageEvent;
 use App\Enums\PaymentMethod;
 use App\Enums\SubscriptionStatus;
 use App\Filament\Gym\Support\MembershipFields;
@@ -11,6 +12,7 @@ use App\Models\Member;
 use App\Models\MembershipPlan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Messaging\Messenger;
 use App\Services\Messaging\PhoneNumber;
 use App\Services\SubscriptionService;
 use App\Support\Access;
@@ -119,36 +121,92 @@ class MemberActions
             });
     }
 
-    /** Create a member-portal login for the member and email them a link to set a password. */
+    /**
+     * Gives the member a member-app login. With an email they get a set-password
+     * link; otherwise a WhatsApp / SMS message to sign in with their mobile and a code.
+     */
     public static function invite(): Action
     {
         return Action::make('invite')
-            ->label(fn (Member $record) => $record->user_id ? 'Resend portal invite' : 'Invite to member app')
+            ->label(fn (Member $record) => $record->user_id ? 'Resend member app invite' : 'Invite to member app')
             ->icon(Heroicon::OutlinedDevicePhoneMobile)
             ->color('gray')
             ->visible(fn () => Access::can('members.edit'))
-            ->disabled(fn (Member $record) => blank($record->email))
-            ->tooltip(fn (Member $record) => blank($record->email) ? 'Add an email address first' : null)
             ->requiresConfirmation()
+            ->modalDescription(fn (Member $record) => filled($record->email)
+                ? "We'll email {$record->email} a link to set a password. They can also sign in with their mobile number and a one-time code."
+                : "We'll message {$record->phone} on WhatsApp / SMS. They sign in with their mobile number and a one-time code.")
             ->action(function (Member $record): void {
-                $user = $record->user ?? User::query()->firstOrCreate(
-                    ['email' => strtolower($record->email)],
-                    ['name' => $record->name, 'phone' => $record->phone, 'password' => Str::password(32)],
-                );
-                $record->update(['user_id' => $user->id]);
+                $user = static::appUserFor($record);
 
-                $status = Password::broker(Filament::getPanel('member')->getAuthPasswordBroker())
-                    ->sendResetLink(['email' => $user->email], function (User $user, string $token) {
-                        $notification = new ResetPassword($token);
-                        $notification->url = Filament::getPanel('member')->getResetPasswordUrl($token, $user);
-                        $user->notify($notification);
-                    });
+                if (filled($user->email)) {
+                    $status = Password::broker(Filament::getPanel('member')->getAuthPasswordBroker())
+                        ->sendResetLink(['email' => $user->email], function (User $user, string $token) {
+                            $notification = new ResetPassword($token);
+                            $notification->url = Filament::getPanel('member')->getResetPasswordUrl($token, $user);
+                            $user->notify($notification);
+                        });
+                    $sent = $status === Password::RESET_LINK_SENT;
+                } else {
+                    $sent = app(Messenger::class)->send($record, MessageEvent::AppInvite, ['app_url' => Filament::getPanel('member')->getLoginUrl()]) > 0;
+                }
 
                 Notification::make()
-                    ->title($status === Password::RESET_LINK_SENT ? 'Invite sent to '.$user->email : 'Could not send invite: '.__($status))
-                    ->status($status === Password::RESET_LINK_SENT ? 'success' : 'danger')
+                    ->title($sent ? 'Invite sent' : 'Member app login created')
+                    ->body($sent
+                        ? 'They can sign in at '.Filament::getPanel('member')->getLoginUrl()
+                        : 'The message could not be sent (check Messaging → Sent messages). Use "Set app password" to give them a password instead.')
+                    ->status($sent ? 'success' : 'warning')
                     ->send();
             });
+    }
+
+    /** Lets the front desk set a password with the member, e.g. for someone without email or WhatsApp. */
+    public static function setAppPassword(): Action
+    {
+        return Action::make('setAppPassword')
+            ->label('Set app password')
+            ->icon(Heroicon::OutlinedKey)
+            ->color('gray')
+            ->visible(fn () => Access::can('members.edit'))
+            ->modalDescription(fn (Member $record) => "{$record->name} signs in at ".Filament::getPanel('member')->getLoginUrl()." with mobile number {$record->phone} and this password.")
+            ->schema([
+                TextInput::make('password')->password()->revealable()->required()->minLength(8)
+                    ->helperText('At least 8 characters. Ask the member to type it themselves.'),
+            ])
+            ->action(function (Member $record, array $data): void {
+                $user = static::appUserFor($record);
+                $user->update(['password' => $data['password']]);
+
+                Notification::make()->title('Member app password set')->success()->send();
+            });
+    }
+
+    /**
+     * The member's app login: the one already linked, else an existing login with the
+     * same mobile or email (one person, one login across gyms), else a new one.
+     */
+    public static function appUserFor(Member $member): User
+    {
+        $user = $member->user
+            ?? User::findByPhone($member->phone)
+            ?? (filled($member->email) ? User::query()->where('email', strtolower($member->email))->first() : null)
+            ?? User::create([
+                'name' => $member->name,
+                'email' => $member->email ?: null,
+                'phone' => $member->phone,
+                'password' => Str::password(32),
+            ]);
+
+        if (blank($user->phone_e164)) {
+            $user->update(['phone' => $member->phone]);
+        }
+
+        if ($member->user_id !== $user->id) {
+            $member->update(['user_id' => $user->id]);
+        }
+
+        return $user;
     }
 
     public static function whatsapp(): Action

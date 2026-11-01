@@ -60,7 +60,7 @@
                     @foreach ([
                         ['name', 'Full name', 'text', true],
                         ['phone', 'Mobile number', 'tel', true],
-                        ['email', 'Email', 'email', true],
+                        ['email', 'Email (optional)', 'email', false],
                         ['password', 'Choose a password for the member app', 'password', true],
                         ['date_of_birth', 'Date of birth', 'date', false],
                         ['weight_kg', 'Weight (kg)', 'number', false],

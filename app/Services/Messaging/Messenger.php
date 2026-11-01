@@ -39,6 +39,7 @@ class Messenger
         ?string $dedupeKey = null,
         ?array $channels = null,
         ?Broadcast $broadcast = null,
+        array $secret = [],
     ): int {
         $gym = $member->gym;
         $channels ??= array_map(fn ($c) => MessageChannel::from($c), (array) $gym->setting('channels'));
@@ -71,7 +72,10 @@ class Messenger
             $body = $this->render($rawBody, $vars);
             $subject = $broadcast?->title ?? ($template?->subject ? $this->render($template->subject, $vars) : $event->getLabel().' — '.$gym->name);
 
-            [$status, $error, $usage] = $this->deliver($gym, $channel, $member, $recipient, $body, $subject, $template?->provider_template, $this->orderedValues($rawBody, $vars));
+            [$status, $error, $usage] = $this->deliver($gym, $channel, $member, $recipient, $body, $subject, $template?->provider_template, $this->orderedValues($rawBody, $vars), chargeable: $event !== MessageEvent::LoginCode);
+
+            // Secrets (login codes) never reach the log that gym staff can read.
+            $loggedBody = $secret ? $this->render($rawBody, [...$vars, ...array_fill_keys($secret, '••••••')]) : $body;
 
             $log = MessageLog::withoutGlobalScopes()->create([
                 'gym_id' => $gym->id,
@@ -81,7 +85,7 @@ class Messenger
                 'event' => $event,
                 'channel' => $channel,
                 'recipient' => $recipient,
-                'body' => $body,
+                'body' => $loggedBody,
                 'status' => $status,
                 'error' => $error,
                 'dedupe_key' => $dedupeKey,
@@ -154,7 +158,7 @@ class Messenger
     }
 
     /** @return array{0: string, 1: ?string, 2: ?CreditTransaction} status (sent, logged, failed), error, credits used */
-    protected function deliver(Gym $gym, MessageChannel $channel, Member $member, string $recipient, string $body, string $subject, ?string $providerTemplate, array $params): array
+    protected function deliver(Gym $gym, MessageChannel $channel, Member $member, string $recipient, string $body, string $subject, ?string $providerTemplate, array $params, bool $chargeable = true): array
     {
         $usage = null;
 
@@ -173,7 +177,8 @@ class Messenger
             }
 
             // Messages through the platform's WhatsApp / SMS account use the gym's prepaid credits.
-            if ($cost = $this->credits->costFor($gym, $channel)) {
+            // Login codes are free so members can always get into the app.
+            if ($chargeable && ($cost = $this->credits->costFor($gym, $channel))) {
                 $usage = $this->credits->debit($gym, $cost, $channel->getLabel().' to '.$recipient);
 
                 if (! $usage) {

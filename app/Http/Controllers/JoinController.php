@@ -57,7 +57,7 @@ class JoinController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:20', Rule::unique('members', 'phone')->where('gym_id', $gym->id)->whereNull('deleted_at')],
-            'email' => ['required', 'email', 'max:120'],
+            'email' => ['nullable', 'email', 'max:120'],
             'password' => ['required', 'string', 'min:8'],
             'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
@@ -86,16 +86,18 @@ class JoinController extends Controller
         }
         unset($data['height_feet'], $data['height_inches']);
 
-        $existing = User::query()->where('email', strtolower($data['email']))->first();
+        // One person, one login: reuse an account with the same mobile or email, but only with its password.
+        $existing = User::findByPhone($data['phone'])
+            ?? (filled($data['email'] ?? null) ? User::query()->where('email', strtolower($data['email']))->first() : null);
 
         if ($existing && ! Hash::check($data['password'], $existing->password)) {
-            throw ValidationException::withMessages(['email' => 'This email already has an account. Enter that account\'s password, or use another email.']);
+            throw ValidationException::withMessages(['password' => 'This mobile number or email already has a member app login. Enter that password, or sign in with a one-time code first.']);
         }
 
         $member = DB::transaction(function () use ($data, $existing, $gym) {
             $user = $existing ?? User::create([
                 'name' => $data['name'],
-                'email' => strtolower($data['email']),
+                'email' => filled($data['email'] ?? null) ? strtolower($data['email']) : null,
                 'phone' => $data['phone'],
                 'password' => $data['password'],
             ]);

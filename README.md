@@ -121,6 +121,12 @@ Owners enter their domain under **Gym settings → Website → Your own domain**
 - **Quick option, no Meta app:** under **Gym settings → Integrations → Lead webhook**, create an address and use it in Zapier, Make or Pabbly ("Facebook Lead Ads → Webhook POST").
 - **Direct option:** create a Meta app with the **Webhooks** product. Subscribe the **Page → leadgen** field with callback URL `https://yourapp.com/webhooks/meta` and the verify token from `META_VERIFY_TOKEN`. Put the app secret in `META_APP_SECRET`. The app needs the `leads_retrieval` and `pages_manage_metadata` permissions, which require Meta app review. Each gym then enters its page ID and page token in Integrations and clicks **Connect page**.
 
+### Member app sign-in
+
+- Members sign in at `/member` with their **mobile number (or email) and password**, or tap **Sign in with a one-time code** to get a 6-digit code by WhatsApp (SMS if WhatsApp fails). Codes expire after 10 minutes, lock after 5 wrong tries, are rate limited, don't use message credits, and are hidden in Sent messages.
+- Staff give a member access from the member's page: **Invite to member app** (email link, or WhatsApp/SMS if they have no email) or **Set app password** at the desk. Online signup doesn't need an email.
+- WhatsApp only allows business-started messages from approved templates. Create an **Authentication** template in Meta, then enter its name for the "Member app login code" event under **Messaging → Message templates**. Do the same with a DLT template for SMS.
+
 ### Message credits (SMS / WhatsApp)
 
 - Each WhatsApp or SMS sent through **your** platform account (`WHATSAPP_*`, `MSG91_*` in `.env`) uses the gym's prepaid credits. That's 1 credit per message by default (`CREDITS_PER_WHATSAPP`, `CREDITS_PER_SMS`).

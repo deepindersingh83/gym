@@ -13,6 +13,8 @@ enum MessageEvent: string implements HasLabel
     case Anniversary = 'anniversary';
     case PaymentReceived = 'payment_received';
     case ReviewRequest = 'review_request';
+    case LoginCode = 'login_code';
+    case AppInvite = 'app_invite';
     case Broadcast = 'broadcast';
 
     public function getLabel(): string
@@ -25,6 +27,8 @@ enum MessageEvent: string implements HasLabel
             self::Anniversary => 'Anniversary wish',
             self::PaymentReceived => 'Payment received',
             self::ReviewRequest => 'Google review request',
+            self::LoginCode => 'Member app login code',
+            self::AppInvite => 'Member app invite',
             self::Broadcast => 'Broadcast',
         };
     }
@@ -40,6 +44,8 @@ enum MessageEvent: string implements HasLabel
             self::Anniversary => 'Happy anniversary {name}! Best wishes from all of us at {gym}.',
             self::PaymentReceived => 'Hi {name}, we received {currency}{amount} at {gym}. Receipt: {receipt}. Thank you!',
             self::ReviewRequest => 'Hi {name}, you have completed {visits} workouts at {gym} — amazing! 💪 Would you take 30 seconds to rate us on Google? It really helps: {review_link}',
+            self::LoginCode => '{code} is your {gym} login code. It expires in 10 minutes. Do not share it with anyone.',
+            self::AppInvite => 'Hi {name}, your {gym} member app is ready: see your membership, payments, receipts and progress. Open {app_url} and sign in with your mobile number and a one-time code.',
             self::Broadcast => '{message}',
         };
     }

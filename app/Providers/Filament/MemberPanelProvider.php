@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Member\Pages\Auth\EditProfile;
+use App\Filament\Member\Pages\Auth\Login;
+use App\Filament\Member\Pages\Auth\LoginWithCode;
 use App\Http\Middleware\ApplyMemberContext;
 use App\Support\CurrentMember;
 use Filament\Http\Middleware\Authenticate;
@@ -16,6 +19,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /** The member app: membership, renewal and payments, QR check-in, plans and progress. */
@@ -26,9 +30,10 @@ class MemberPanelProvider extends PanelProvider
         return $panel
             ->id('member')
             ->path('member')
-            ->login()
+            ->login(Login::class)
+            ->routes(fn () => Route::get('login-code', LoginWithCode::class)->name('auth.login-code'))
             ->passwordReset()
-            ->profile(isSimple: false)
+            ->profile(EditProfile::class, isSimple: false)
             ->brandName(fn () => CurrentMember::get()?->gym?->name ?? config('app.name'))
             ->brandLogo(fn () => CurrentMember::get()?->gym?->logo_url)
             ->brandLogoHeight('2.5rem')

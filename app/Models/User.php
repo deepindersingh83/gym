@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StaffRole;
+use App\Services\Messaging\PhoneNumber;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
@@ -37,6 +38,33 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (User $user): void {
+            if ($user->isDirty('phone')) {
+                $user->phone_e164 = static::normalizePhone($user->phone);
+            }
+
+            $user->email = filled($user->email) ? strtolower(trim($user->email)) : null;
+        });
+    }
+
+    /** International digits (919876543210), or null when there is no number. */
+    public static function normalizePhone(?string $phone): ?string
+    {
+        return filled(preg_replace('/\D/', '', (string) $phone)) ? PhoneNumber::international((string) $phone) : null;
+    }
+
+    /** The login for this mobile number, preferring one that has a member profile. */
+    public static function findByPhone(?string $phone): ?self
+    {
+        $normalized = static::normalizePhone($phone);
+
+        return $normalized
+            ? static::query()->where('phone_e164', $normalized)->withExists('memberProfiles')->orderByDesc('member_profiles_exists')->orderBy('id')->first()
+            : null;
     }
 
     /** Gyms this user works at (as owner, manager, trainer or receptionist). */

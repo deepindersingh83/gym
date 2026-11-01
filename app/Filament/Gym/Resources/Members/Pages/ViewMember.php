@@ -22,6 +22,7 @@ class ViewMember extends ViewRecord
                 MemberActions::checkIn(),
                 MemberActions::whatsapp(),
                 MemberActions::invite(),
+                MemberActions::setAppPassword(),
                 EditAction::make(),
             ]),
         ];
