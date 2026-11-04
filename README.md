@@ -6,7 +6,7 @@ A Laravel 13 + Filament 5 app for running one gym or many: members, membership p
 
 | Area | Features |
 | --- | --- |
-| **Platform** | Super-admin panel (`/admin`): all gyms, software plans (Basic / Pro / Enterprise) with member, branch and staff limits, trial extension, recording a gym's payment. Gym owners sign up and go through an onboarding wizard (details, GST, opening hours, logo and colour, starter plans). 14-day free trial; changes are locked when the trial or plan ends. |
+| **Platform** | Admin panel (`/admin`) for your team: all gyms, software plans (Basic / Pro / Enterprise) with limits and features, automatic billing (Razorpay in India, Stripe in Australia), refunds with credit notes, revenue dashboard, discount codes, partners, admin roles with two-step login, and an admin log. Gym owners sign up and go through an onboarding wizard (details, GST, opening hours, logo and colour, starter plans). 14-day free trial; changes are locked when the trial or plan ends. |
 | **Roles** | Gym Owner, Branch Manager, Trainer and Receptionist in the gym panel (`/app`), plus Member in the member app (`/member`). Branch staff only see their branch. Trainers only see their own members. The role matrix is in `app/Support/Access.php`. |
 | **Multi-branch** | Branches per gym. Owners switch between "All branches" and a single branch from the top bar. |
 | **Branding** | Each gym has its own logo and colour in the panel, member app, public page and PDFs. Optional subdomain per gym (`fitzone.yourapp.com`). |
@@ -15,7 +15,10 @@ A Laravel 13 + Filament 5 app for running one gym or many: members, membership p
 | **Plans** | Monthly, quarterly, half-yearly, yearly, day pass, personal training (with session counts), couple and family, custom. Admission fee charged on the first membership only. |
 | **Discounts** | Coupons and offers (festival, referral, corporate) with percentage or fixed value, validity dates and usage limits. |
 | **Billing** | GST invoices (CGST/SGST, SAC 999723) and receipts as PDFs. Part payments with dues tracking and an outstanding-dues report (Excel and PDF). Payment modes: cash, GPay, UPI, card, bank transfer, online. Razorpay payment links and **UPI AutoPay** for automatic renewals. Day-end cash closing. Expenses and profit. |
-| **Reminders** | Daily job sends renewal reminders (e.g. 7, 3 and 1 days before), expiry notices, pending-dues reminders, and birthday and anniversary wishes, over WhatsApp, SMS, email and member-app notifications. Each message is sent once. Gyms can edit message templates and send broadcasts. |
+| **Reminders** | Daily job sends renewal reminders (e.g. 7, 3 and 1 days before), expiry notices, a win-back offer to lapsed members, pending-dues reminders, and birthday and anniversary wishes, over WhatsApp, SMS, email and member-app notifications. Renewal messages include a personal renew-now link. Each message is sent once, and members can opt out of offers. Gyms can edit message templates and send broadcasts. |
+| **Referrals** | Members share a personal link or code from the member app; when the friend pays for their first membership, both get free days (set by the gym). |
+| **Reports** | Member retention by month, revenue and ratings per trainer, busiest check-in hours, enquiry conversion by source, and an evening summary email for the owner. |
+| **Privacy** | `/privacy`, `/terms` and a privacy notice per gym; consent records; member data download and erasure; full gym data export; account closure with deletion after 30 days. |
 | **Fitness** | Body measurement history (weight, BMI, body fat, chest, waist, hips, arms, thighs) with progress charts. Workout and diet plans assigned by trainers. Fitness goals. |
 | **Staff** | Staff profiles with role, branch and shift. Staff attendance. Trainer ratings and feedback from members. |
 | **Member app** | Membership and renewal date, QR code for check-in, renewing and paying dues online, payment history with invoices, progress charts, workout and diet plans, rating their trainer. |
@@ -71,7 +74,7 @@ No Node or npm build is needed: Filament's assets are published by `composer ins
    * * * * * /usr/bin/php8.3 /home/<site-user>/htdocs/yourapp.com/artisan schedule:run >> /dev/null 2>&1
    ```
    This sends reminders daily at 09:00, in the timezone set by `APP_TIMEZONE`.
-7. **Queue worker.** Password-reset and invite emails are queued. As root, install Supervisor (`apt install supervisor`) and add `/etc/supervisor/conf.d/gym-queue.conf`:
+7. **Queue worker (required).** Invoices, credit notes, reminders, daily summaries, data exports and password-reset emails are sent by the queue worker. Without it they wait in the queue and are not sent. As root, install Supervisor (`apt install supervisor`) and add `/etc/supervisor/conf.d/gym-queue.conf`:
    ```ini
    [program:gym-queue]
    command=/usr/bin/php8.3 /home/<site-user>/htdocs/yourapp.com/artisan queue:work --sleep=3 --tries=3 --max-time=3600
@@ -207,10 +210,14 @@ A channel without credentials doesn't fail: the message is written to the log an
 
 ## Not built yet
 
-- Automated billing of gyms for the software plans. Today the super admin records a gym's payment.
+- Online payments from members of Australian gyms (Indian gyms use Razorpay). Australian members pay at the desk.
+- Discount codes on auto-renew; they apply to one-off plan payments only.
+- WhatsApp delivery of the owner's daily summary. It needs a WhatsApp template approved by Meta, so for now it is email only.
 - Native mobile apps. The member app is a mobile-friendly web app.
 - Biometric or RFID door hardware.
-- Lead/CRM, group class booking, and point-of-sale/inventory, which were not in the chosen scope.
+- Group class booking and point-of-sale/inventory.
+
+The privacy policy and terms are a starting template written for India (DPDP Act 2023) and Australia (Privacy Act 1988). Have a lawyer review them before you rely on them.
 
 ## Code map
 
