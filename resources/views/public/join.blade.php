@@ -54,8 +54,15 @@
                 <div class="alert">Please fix the highlighted fields below.</div>
             @endif
 
+            @if ($referrer)
+                <div class="card" style="background: #f0fdf4; border-color: #bbf7d0; padding: 14px 18px">
+                    🎉 <strong>{{ \Illuminate\Support\Str::of($referrer->name)->before(' ') }}</strong> invited you.
+                    @if ($friendDays > 0) You get <strong>{{ $friendDays }} free days</strong> on your first membership. @endif
+                </div>
+            @endif
             <form method="POST" action="{{ route('join.store', $gym, false) }}" enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="ref" value="{{ old('ref', $referrer?->referral_code) }}">
                 <div class="grid">
                     @foreach ([
                         ['name', 'Full name', 'text', true],

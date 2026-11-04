@@ -15,6 +15,7 @@ use App\Filament\Gym\Resources\Members\RelationManagers\PaymentsRelationManager;
 use App\Filament\Gym\Resources\Members\RelationManagers\SubscriptionsRelationManager;
 use App\Filament\Gym\Support\HeightField;
 use App\Models\Member;
+use App\Services\Referrals;
 use App\Support\GymOptions;
 use App\Support\Height;
 use App\Support\Money;
@@ -141,6 +142,16 @@ class MemberResource extends Resource
                     ->disabled(fn () => ! Tenancy::canSwitchBranch())
                     ->dehydrated(),
                 Select::make('trainer_id')->label('Trainer')->options(fn () => GymOptions::trainers()),
+                Select::make('referred_by_member_id')->label('Referred by')
+                    ->searchable()
+                    ->getSearchResultsUsing(fn (string $search, ?Member $record) => Member::query()
+                        ->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")->orWhere('referral_code', strtoupper($search))->orWhere('member_code', $search))
+                        ->when($record, fn ($q) => $q->whereKeyNot($record->id))
+                        ->limit(20)->get()->mapWithKeys(fn (Member $m) => [$m->id => "{$m->name} ({$m->member_code})"]))
+                    ->getOptionLabelUsing(fn ($value) => ($m = Member::query()->find($value)) ? "{$m->name} ({$m->member_code})" : null)
+                    ->disabled(fn (?Member $record) => (bool) $record?->referred_by_member_id)
+                    ->helperText('Search by name, mobile or their referral code. The friend reward is given on the first payment.')
+                    ->visible(fn () => app(Referrals::class)->enabled(Tenancy::gym())),
                 DatePicker::make('joined_on')->default(today()),
                 Select::make('source')->options(['walk_in' => 'Walk-in', 'online' => 'Online signup', 'referral' => 'Referral', 'social' => 'Social media', 'other' => 'Other'])->default('walk_in'),
                 Toggle::make('is_active')->label('Active')->default(true)->inline(false),

@@ -115,6 +115,9 @@ class SubscriptionService
                 Member::withoutGlobalScopes()->where('gym_id', $member->gym_id)->whereIn('id', $extra)->pluck('id')
             );
 
+            // Free days a member earned from referrals while they had no membership.
+            app(Referrals::class)->applyBonusDays($subscription);
+
             if ($paidAmount !== null && $paidAmount > 0) {
                 $this->recordPayment($subscription, $paidAmount, $paymentMethod ?? PaymentMethod::Cash);
             }

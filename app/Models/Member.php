@@ -6,6 +6,7 @@ use App\Enums\StaffRole;
 use App\Enums\SubscriptionStatus;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToGym;
+use App\Services\Referrals;
 use App\Support\Tenancy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,6 +50,13 @@ class Member extends Model
         static::addGlobalScope('trainer', function (Builder $query): void {
             if (Tenancy::role() === StaffRole::Trainer) {
                 $query->where($query->getModel()->qualifyColumn('trainer_id'), auth()->id());
+            }
+        });
+
+        // Friends who joined with a member's code: reward both on the first payment.
+        static::saved(function (Member $member): void {
+            if ($member->referred_by_member_id && ($member->wasRecentlyCreated || $member->wasChanged('referred_by_member_id'))) {
+                app(Referrals::class)->register($member);
             }
         });
 

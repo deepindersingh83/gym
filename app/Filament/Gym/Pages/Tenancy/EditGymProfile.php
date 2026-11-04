@@ -175,6 +175,14 @@ class EditGymProfile extends EditTenantProfile
                         Toggle::make('settings.send_payment_receipts')->label('Payment receipts')->default(true),
                     ]),
                 ]),
+                Tab::make('Referrals')->schema([
+                    Toggle::make('settings.referral_enabled')->label('Reward members who bring a friend')->default(true)
+                        ->helperText('Each member gets a personal join link in the member app. When the friend makes their first payment, both get free days.'),
+                    Grid::make(2)->schema([
+                        TextInput::make('settings.referral_referrer_days')->label('Free days for the member who referred')->numeric()->minValue(0)->maxValue(365)->default(15),
+                        TextInput::make('settings.referral_friend_days')->label('Free days for the friend')->numeric()->minValue(0)->maxValue(365)->default(7),
+                    ]),
+                ]),
                 Tab::make('Google reviews')->schema([
                     UpgradeNotice::make('google_reviews'),
                     Toggle::make('settings.review_request_enabled')->label('Ask happy members for a Google review')->live()

@@ -17,6 +17,7 @@ enum MessageEvent: string implements HasLabel
     case AppInvite = 'app_invite';
     case Broadcast = 'broadcast';
     case WinBack = 'win_back';
+    case ReferralReward = 'referral_reward';
 
     public function getLabel(): string
     {
@@ -32,6 +33,7 @@ enum MessageEvent: string implements HasLabel
             self::AppInvite => 'Member app invite',
             self::Broadcast => 'Broadcast',
             self::WinBack => 'Win-back offer',
+            self::ReferralReward => 'Referral reward',
         };
     }
 
@@ -50,6 +52,7 @@ enum MessageEvent: string implements HasLabel
             self::AppInvite => 'Hi {name}, your {gym} member app is ready: see your membership, payments, receipts and progress. Open {app_url} and sign in with your mobile number and a one-time code.',
             self::Broadcast => '{message}',
             self::WinBack => 'Hi {name}, we miss you at {gym}! Come back this week: {offer}. Renew here: {renew_link}',
+            self::ReferralReward => 'Hi {name}, thanks to you and {friend} training together at {gym}, we have added {days} free days to your membership. Keep bringing friends!',
         };
     }
 }

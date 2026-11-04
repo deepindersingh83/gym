@@ -9,6 +9,7 @@ use App\Models\MembershipPlan;
 use App\Models\User;
 use App\Services\CustomDomains;
 use App\Services\Payments\RazorpayService;
+use App\Services\Referrals;
 use App\Support\Height;
 use App\Support\PhotoStore;
 use App\Support\Tenancy;
@@ -28,9 +29,13 @@ class JoinController extends Controller
     public function show(Gym $gym): View
     {
         Tenancy::setGym($gym);
+        $referrals = app(Referrals::class);
+        $referrer = $referrals->enabled($gym) ? $referrals->findReferrer($gym, request('ref')) : null;
 
         return view('public.join', [
             'gym' => $gym,
+            'referrer' => $referrer,
+            'friendDays' => (int) $gym->setting('referral_friend_days'),
             'plans' => MembershipPlan::query()->where('is_active', true)->orderBy('price')->get(),
             'open' => $this->acceptingSignups($gym),
             'canPayOnline' => RazorpayService::for($gym)->isConfigured(),
@@ -78,6 +83,7 @@ class JoinController extends Controller
             }],
             'plan_id' => ['nullable', Rule::exists('membership_plans', 'id')->where('gym_id', $gym->id)->where('is_active', true)],
             'consent' => ['accepted'],
+            'ref' => ['nullable', 'string', 'max:20'],
         ], ['phone.unique' => 'This phone number is already registered with the gym. Please contact the front desk.']);
 
         // Gyms that measure in feet send feet and inches; store centimetres.
@@ -94,7 +100,11 @@ class JoinController extends Controller
             throw ValidationException::withMessages(['password' => 'This mobile number or email already has a member app login. Enter that password, or sign in with a one-time code first.']);
         }
 
-        $member = DB::transaction(function () use ($data, $existing, $gym) {
+        $referrals = app(Referrals::class);
+        $referrer = $referrals->enabled($gym) ? $referrals->findReferrer($gym, $data['ref'] ?? null) : null;
+        unset($data['ref']);
+
+        $member = DB::transaction(function () use ($data, $existing, $gym, $referrer) {
             $user = $existing ?? User::create([
                 'name' => $data['name'],
                 'email' => filled($data['email'] ?? null) ? strtolower($data['email']) : null,
@@ -107,7 +117,8 @@ class JoinController extends Controller
                 'branch_id' => $gym->branches()->where('is_active', true)->orderBy('id')->value('id'),
                 'user_id' => $user->id,
                 'photo_path' => filled($data['photo_data'] ?? null) ? PhotoStore::store($data['photo_data'], "members/{$gym->id}") : null,
-                'source' => 'online',
+                'source' => $referrer ? 'referral' : 'online',
+                'referred_by_member_id' => $referrer?->id,
                 'consented_at' => now(),
                 'consent_source' => 'online_signup',
                 ...collect($data)->except(['password', 'photo_data', 'plan_id', 'consent'])->all(),

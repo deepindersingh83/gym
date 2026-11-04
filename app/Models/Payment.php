@@ -5,9 +5,11 @@ namespace App\Models;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToGym;
+use App\Services\Referrals;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Payment extends Model
 {
@@ -46,6 +48,9 @@ class Payment extends Model
         };
 
         static::saved($sync);
+
+        // A referred friend's first payment rewards both members.
+        static::created(fn (Payment $payment) => DB::afterCommit(fn () => app(Referrals::class)->paymentReceived($payment)));
         static::deleted($sync);
     }
 

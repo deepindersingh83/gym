@@ -46,6 +46,9 @@ return [
         'win_back_offer' => null,
         'daily_summary_enabled' => true,
         'daily_summary_hour' => 21,
+        'referral_enabled' => true,
+        'referral_referrer_days' => 15,
+        'referral_friend_days' => 7,
     ],
 
     'whatsapp' => [
