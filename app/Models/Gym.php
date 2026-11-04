@@ -49,6 +49,8 @@ class Gym extends Model implements HasAvatar, HasCurrentTenantLabel
             'onboarding_completed' => 'boolean',
             'gst_registered' => 'boolean',
             'auto_renew' => 'boolean',
+            'payment_failed_at' => 'datetime',
+            'payment_retry_at' => 'datetime',
         ];
     }
 

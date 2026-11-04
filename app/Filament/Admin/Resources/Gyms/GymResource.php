@@ -32,6 +32,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -166,7 +167,8 @@ class GymResource extends Resource
                         'active' => 'success', 'trial' => 'warning', default => 'danger'
                     }),
                 TextColumn::make('trial_ends_at')->label('Trial ends')->date('d M Y')->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('subscription_ends_at')->label('Paid until')->date('d M Y')->placeholder('—'),
+                TextColumn::make('subscription_ends_at')->label('Paid until')->date('d M Y')->placeholder('—')
+                    ->description(fn (Gym $record) => $record->payment_failed_at ? 'Payment failed' : null),
                 TextColumn::make('members_count')->label('Members'),
                 TextColumn::make('message_credits')->label('Credits')->numeric()->sortable()
                     ->color(fn ($state) => $state < (int) config('gym.credits.low_balance') ? 'danger' : null),
@@ -178,6 +180,7 @@ class GymResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')->options(self::STATUSES),
+                Filter::make('payment_failed')->label('Automatic payment failed')->query(fn (Builder $q) => $q->whereNotNull('payment_failed_at')),
                 SelectFilter::make('saas_plan_id')->label('Plan')->options(fn () => SaasPlan::query()->pluck('name', 'id')),
                 TrashedFilter::make(),
             ])

@@ -7,8 +7,11 @@ use App\Models\SaasPayment;
 use App\Models\SaasPlan;
 use App\Services\Credits;
 use App\Services\Payments\PlatformBilling;
+use App\Support\AdminLog;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -241,10 +244,28 @@ class BillingCheckout
                 $this->recordFromNotes($notes, ($payment['amount'] ?? 0) / 100, 'razorpay', $payment['id'] ?? null, renewal: true);
                 break;
 
-            case 'subscription.cancelled':
+            case 'subscription.pending':
+                // A charge failed; Razorpay retries it over the next days.
+                $this->paymentFailed($subscription['id'] ?? null, $payment['error_description'] ?? 'Your bank or card declined the automatic payment.', retrying: true);
+                break;
+
             case 'subscription.halted':
+                // All retries failed: Razorpay stops the mandate.
+                $this->paymentFailed($subscription['id'] ?? null, 'Every retry of the automatic payment failed, so auto-renew has stopped.', retrying: false);
+                $this->autoRenewOff($subscription['id'] ?? null);
+                break;
+
+            case 'subscription.cancelled':
             case 'subscription.completed':
                 $this->autoRenewOff($subscription['id'] ?? null);
+                break;
+
+            case 'refund.processed':
+                $refund = $event['payload']['refund']['entity'] ?? [];
+
+                if (filled($refund['id'] ?? null) && filled($refund['payment_id'] ?? null)) {
+                    app(Refunds::class)->recordFromGateway('razorpay', $refund['payment_id'], $refund['id'], ($refund['amount'] ?? 0) / 100);
+                }
                 break;
         }
     }
@@ -257,6 +278,10 @@ class BillingCheckout
             case 'checkout.session.completed':
                 if (($object['mode'] ?? null) === 'subscription') {
                     $this->autoRenewOn($object['metadata'] ?? [], 'stripe', $object['subscription'] ?? null);
+
+                    if (filled($object['customer'] ?? null) && ($gym = Gym::query()->find($object['metadata']['gym_id'] ?? 0))) {
+                        $gym->update(['billing_customer_id' => $object['customer']]);
+                    }
                 } elseif (($object['payment_status'] ?? null) === 'paid') {
                     $this->recordFromNotes($object['metadata'] ?? [], ($object['amount_total'] ?? 0) / 100, 'stripe', $object['payment_intent'] ?? $object['id'] ?? null);
                 }
@@ -279,8 +304,27 @@ class BillingCheckout
                 }
                 break;
 
+            case 'invoice.payment_failed':
+                $details = $object['parent']['subscription_details'] ?? $object['subscription_details'] ?? [];
+                $retryAt = $object['next_payment_attempt'] ?? null;
+                $this->paymentFailed(
+                    $details['subscription'] ?? $object['subscription'] ?? null,
+                    $object['last_finalization_error']['message'] ?? 'Your card was declined for the automatic payment.',
+                    retrying: (bool) $retryAt,
+                    retryAt: $retryAt ? Carbon::createFromTimestamp($retryAt) : null,
+                );
+                break;
+
             case 'customer.subscription.deleted':
                 $this->autoRenewOff($object['id'] ?? null);
+                break;
+
+            case 'charge.refunded':
+                foreach ($object['refunds']['data'] ?? [] as $refund) {
+                    if (filled($object['payment_intent'] ?? null) && filled($refund['id'] ?? null)) {
+                        app(Refunds::class)->recordFromGateway('stripe', $object['payment_intent'], $refund['id'], ($refund['amount'] ?? 0) / 100);
+                    }
+                }
                 break;
         }
     }
@@ -361,6 +405,43 @@ class BillingCheckout
             'billing_subscription_id' => $subscriptionId,
             'billing_period' => $notes['period'] ?? 'monthly',
         ]);
+    }
+
+    /** Records a failed automatic payment and tells the owner what to do. Gyms keep the usual grace period. */
+    protected function paymentFailed(?string $subscriptionId, string $reason, bool $retrying, ?Carbon $retryAt = null): void
+    {
+        $gym = blank($subscriptionId) ? null : Gym::query()->where('billing_subscription_id', $subscriptionId)->first();
+
+        if (! $gym) {
+            return;
+        }
+
+        $firstFailure = ! $gym->payment_failed_at;
+        $gym->update(['payment_failed_at' => $gym->payment_failed_at ?? now(), 'payment_failure_reason' => Str::limit($reason, 250), 'payment_retry_at' => $retrying ? $retryAt : null]);
+
+        // One email when it first fails, and one when retries have run out.
+        if ($firstFailure || ! $retrying) {
+            $next = $retrying
+                ? 'We will try again'.($retryAt ? ' on '.$retryAt->format('d M Y') : ' in the next few days').'. '.($gym->billing_gateway === 'stripe' ? 'Update your card on the Plan & billing page so it goes through.' : 'Make sure your account or card has funds, or pay now on the Plan & billing page.')
+                : 'Auto-renew has stopped. Pay now on the Plan & billing page'.($gym->subscription_ends_at ? ' before '.$gym->subscription_ends_at->copy()->addDays((int) config('gym.billing.grace_days'))->format('d M Y') : '').' to keep making changes.';
+
+            $this->billing->emailOwner($gym, 'Your automatic payment failed', "We could not take your automatic payment for {$gym->name}: {$reason}\n\n{$next}\n\nPlan & billing: ".route('filament.gym.pages.billing', ['tenant' => $gym]));
+        }
+
+        AdminLog::record('Automatic payment failed', $gym, ['reason' => $reason, 'retrying' => $retrying]);
+    }
+
+    /** Stripe page where the owner updates their card (Australia). */
+    public function updateCardUrl(Gym $gym): string
+    {
+        if ($gym->billing_gateway !== 'stripe' || blank($gym->billing_customer_id)) {
+            throw new RuntimeException('Card details are managed by your bank for this payment method.');
+        }
+
+        return $this->stripe->post('billing_portal/sessions', [
+            'customer' => $gym->billing_customer_id,
+            'return_url' => $this->returnUrl($gym),
+        ])['url'];
     }
 
     protected function autoRenewOff(?string $subscriptionId): void

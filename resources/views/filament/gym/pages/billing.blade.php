@@ -33,12 +33,23 @@
             </div>
 
             <div style="margin-top: 1rem; padding-top: .75rem; border-top: 1px solid rgba(127,127,127,.2); font-size: .875rem">
+                @if ($gym->payment_failed_at)
+                    <div style="color: rgb(220 38 38); margin-bottom: .6rem">
+                        <strong>Automatic payment failed</strong> on {{ $gym->payment_failed_at->format('d M Y') }}.
+                        {{ $gym->payment_failure_reason }}
+                        @if ($gym->payment_retry_at) Next try: {{ $gym->payment_retry_at->format('d M Y') }}. @endif
+                        Pay now below to settle it straight away.
+                    </div>
+                @endif
                 @if ($gym->auto_renew)
                     <div style="display: flex; align-items: center; gap: .4rem; margin-bottom: .5rem">
                         <x-filament::icon icon="heroicon-o-arrow-path" style="width: 1rem; height: 1rem; color: rgb(22 163 74)" />
                         <strong>Auto-renew is on</strong> ({{ $gym->billing_period ?? 'monthly' }})
                     </div>
-                    {{ $this->cancelAutoRenewAction }}
+                    <div style="display: flex; gap: .5rem; flex-wrap: wrap">
+                        {{ $this->updateCardAction }}
+                        {{ $this->cancelAutoRenewAction }}
+                    </div>
                 @elseif ($online)
                     <div style="opacity: .75; margin-bottom: .5rem">Auto-renew is off. Turn it on so your gym never gets locked.</div>
                     {{ $this->autoRenewAction }}

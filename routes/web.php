@@ -34,5 +34,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/{subscription}', [DocumentController::class, 'invoice'])->name('invoices.show');
     Route::get('/receipts/{payment}', [DocumentController::class, 'receipt'])->name('receipts.show');
     Route::get('/billing/invoices/{saasPayment}', [DocumentController::class, 'saasInvoice'])->name('saas-invoices.show');
+    Route::get('/billing/credit-notes/{saasRefund}', [DocumentController::class, 'saasCreditNote'])->name('saas-credit-notes.show');
     Route::post('/branch-switch', BranchSwitchController::class)->name('branch.select');
 });

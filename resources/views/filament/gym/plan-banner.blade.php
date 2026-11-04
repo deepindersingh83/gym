@@ -11,6 +11,18 @@
     <x-filament::callout color="danger" icon="heroicon-o-no-symbol" heading="This account is suspended"
         :description="($gym->suspension_reason ? $gym->suspension_reason . '. ' : '') . 'You can view your data, but changes are locked. Please contact support.'"
         style="margin-bottom: 1rem" />
+@elseif ($gym->payment_failed_at && $gym->hasActiveSaasSubscription())
+    <x-filament::callout
+        color="danger"
+        icon="heroicon-o-credit-card"
+        heading="Your automatic payment failed"
+        :description="$gym->payment_failure_reason . ' ' . ($gym->payment_retry_at ? 'We will try again on ' . $gym->payment_retry_at->format('d M Y') . '.' : '') . ' ' . ($isOwner ? 'Update your payment details or pay now.' : 'Please tell the gym owner.')"
+        style="margin-bottom: 1rem"
+    >
+        @if ($isOwner)
+            <x-slot name="footer"><x-filament::button tag="a" :href="$billingUrl" color="danger">Fix payment</x-filament::button></x-slot>
+        @endif
+    </x-filament::callout>
 @elseif (! $gym->hasActiveSaasSubscription())
     <x-filament::callout
         color="danger"

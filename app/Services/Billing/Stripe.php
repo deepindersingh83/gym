@@ -18,6 +18,11 @@ class Stripe
         return $this->client()->post($path, $params)->throw()->json();
     }
 
+    public function get(string $path, array $query = []): array
+    {
+        return $this->client()->get($path, $query)->throw()->json();
+    }
+
     public function delete(string $path): array
     {
         return $this->client()->delete($path)->throw()->json();

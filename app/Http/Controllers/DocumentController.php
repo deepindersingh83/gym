@@ -6,6 +6,7 @@ use App\Enums\StaffRole;
 use App\Models\Gym;
 use App\Models\Payment;
 use App\Models\SaasPayment;
+use App\Models\SaasRefund;
 use App\Models\Subscription;
 use App\Services\Billing\GymBilling;
 use App\Support\Access;
@@ -47,6 +48,15 @@ class DocumentController extends Controller
         abort_if(blank($saasPayment->invoice_number), 404);
 
         return $billing->invoicePdf($saasPayment)->stream("{$saasPayment->invoice_number}.pdf");
+    }
+
+    public function saasCreditNote(Request $request, SaasRefund $saasRefund, GymBilling $billing): Response
+    {
+        $user = $request->user();
+        $isOwner = $saasRefund->gym && $saasRefund->gym->users()->whereKey($user->id)->wherePivot('role', StaffRole::Owner->value)->exists();
+        abort_unless($isOwner || AdminAccess::can('payments', $user), 403);
+
+        return $billing->creditNotePdf($saasRefund)->stream("{$saasRefund->credit_note_number}.pdf");
     }
 
     protected function authorizeDocument(Request $request, Model $record, string $ability): void

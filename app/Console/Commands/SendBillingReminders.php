@@ -4,10 +4,8 @@ namespace App\Console\Commands;
 
 use App\Filament\Gym\Pages\Billing;
 use App\Models\Gym;
+use App\Services\Billing\GymBilling;
 use Illuminate\Console\Command;
-use Illuminate\Mail\Message;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 /** Emails gym owners before their trial or plan ends, when it has ended, and before changes lock. */
 class SendBillingReminders extends Command
@@ -63,21 +61,6 @@ class SendBillingReminders extends Command
 
     protected function send(Gym $gym, string $subject, string $body): bool
     {
-        $to = $gym->users()->wherePivot('role', 'owner')->first()?->email ?? $gym->email;
-
-        if (blank($to)) {
-            return false;
-        }
-
-        try {
-            $url = Billing::getUrl(panel: 'gym', tenant: $gym);
-            Mail::raw("Hi {$gym->name},\n\n{$body}\n\nPlan & billing: {$url}\n\n".config('app.name'), fn (Message $m) => $m->to($to)->subject($subject));
-
-            return true;
-        } catch (Throwable $e) {
-            report($e);
-
-            return false;
-        }
+        return app(GymBilling::class)->emailOwner($gym, $subject, $body."\n\nPlan & billing: ".Billing::getUrl(panel: 'gym', tenant: $gym));
     }
 }

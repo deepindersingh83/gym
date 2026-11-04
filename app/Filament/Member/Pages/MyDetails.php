@@ -6,6 +6,7 @@ use App\Filament\Forms\Components\CameraPhoto;
 use App\Filament\Gym\Resources\Members\MemberResource;
 use App\Filament\Gym\Support\HeightField;
 use App\Models\Member;
+use App\Services\Billing\GymBilling;
 use App\Services\Compliance\MemberData;
 use App\Support\CurrentMember;
 use BackedEnum;
@@ -21,7 +22,6 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\Mail;
 
 /** The member's own details: view everything, update what is theirs to change. */
 class MyDetails extends Page
@@ -48,16 +48,13 @@ class MyDetails extends Page
                 ->action(function () {
                     $member = CurrentMember::get();
                     $gym = $member->gym;
-                    $to = $gym->users()->wherePivot('role', 'owner')->first()?->email ?? $gym->email;
-
                     activity()->performedOn($member)->causedBy(auth()->user())->tap(fn ($a) => $a->gym_id = $gym->id)->log('Member asked for their data to be erased');
 
-                    if ($to) {
-                        rescue(fn () => Mail::raw(
-                            "{$member->name} ({$member->member_code}) asked for their personal data to be erased.\n\nOpen their profile in ".config('app.name').' and use "Erase personal data".',
-                            fn ($m) => $m->to($to)->subject("Data erasure request: {$member->name}")
-                        ), report: true);
-                    }
+                    app(GymBilling::class)->emailOwner(
+                        $gym,
+                        "Data erasure request: {$member->name}",
+                        "{$member->name} ({$member->member_code}) asked for their personal data to be erased.\n\nOpen their profile in ".config('app.name').' and use "Erase personal data".',
+                    );
 
                     Notification::make()->title('Request sent to '.$gym->name)->body('The gym will erase your details. Contact them if you have questions.')->success()->send();
                 }),

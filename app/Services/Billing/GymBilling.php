@@ -2,19 +2,18 @@
 
 namespace App\Services\Billing;
 
+use App\Jobs\SendPlatformEmail;
 use App\Models\Gym;
 use App\Models\SaasCoupon;
 use App\Models\SaasPayment;
 use App\Models\SaasPlan;
+use App\Models\SaasRefund;
 use App\Support\Country;
 use App\Support\Money;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
-use Illuminate\Mail\Message;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 /**
  * What gyms owe the platform: prices, credit for unused time on plan changes,
@@ -169,6 +168,9 @@ class GymBilling
                 'status' => 'active',
                 'subscription_ends_at' => $ends,
                 'suspension_reason' => null,
+                'payment_failed_at' => null,
+                'payment_failure_reason' => null,
+                'payment_retry_at' => null,
             ]);
 
             $coupon = isset($extra['saas_coupon_id']) ? SaasCoupon::query()->lockForUpdate()->find($extra['saas_coupon_id']) : null;
@@ -239,11 +241,12 @@ class GymBilling
     }
 
     /** Gap-free number per company and financial year, e.g. GF-IN-2627-0001. */
-    public function nextInvoiceNumber(array $entity, CarbonInterface $date): string
+    public function nextInvoiceNumber(array $entity, CarbonInterface $date, bool $creditNote = false): string
     {
         $fyStartMonth = $entity['country'] === 'AU' ? 7 : 4;
         $fy = $date->month >= $fyStartMonth ? $date->year : $date->year - 1;
-        $series = ($entity['invoice_prefix'] ?: 'GF-'.$entity['country']).'-'.substr((string) $fy, 2).substr((string) ($fy + 1), 2);
+        // Credit notes have their own series, e.g. GF-IN-CN-2627-0001.
+        $series = ($entity['invoice_prefix'] ?: 'GF-'.$entity['country']).($creditNote ? '-CN' : '').'-'.substr((string) $fy, 2).substr((string) ($fy + 1), 2);
 
         return DB::transaction(function () use ($series) {
             DB::table('billing_sequences')->insertOrIgnore(['series' => $series, 'next' => 1, 'created_at' => now(), 'updated_at' => now()]);
@@ -259,29 +262,46 @@ class GymBilling
         return Pdf::loadView('pdf.saas-invoice', ['payment' => $payment->loadMissing('gym', 'saasPlan')]);
     }
 
+    public function creditNotePdf(SaasRefund $refund): \Barryvdh\DomPDF\PDF
+    {
+        return Pdf::loadView('pdf.saas-credit-note', ['refund' => $refund->loadMissing('payment')]);
+    }
+
     public function emailInvoice(SaasPayment $payment): void
     {
         $gym = $payment->gym;
-        $to = $gym->users()->wherePivot('role', 'owner')->first()?->email ?? $gym->email;
 
-        if (blank($to) || blank($payment->invoice_number)) {
+        if (! $gym || blank($payment->invoice_number)) {
             return;
         }
 
-        try {
-            $pdf = $this->invoicePdf($payment)->output();
-            $amount = Money::format((float) $payment->amount, $payment->currency);
+        $amount = Money::format((float) $payment->amount, $payment->currency);
 
-            Mail::raw(
-                "Hi {$gym->name},\n\nThank you for your payment of {$amount}. Your tax invoice {$payment->invoice_number} is attached.\n\n"
-                .($payment->kind === 'subscription' && $gym->subscription_ends_at ? 'Your plan is active until '.$gym->subscription_ends_at->format('d M Y').".\n\n" : '')
-                .config('app.name'),
-                fn (Message $message) => $message->to($to)
-                    ->subject('Tax invoice '.$payment->invoice_number.' from '.config('app.name'))
-                    ->attachData($pdf, $payment->invoice_number.'.pdf', ['mime' => 'application/pdf'])
-            );
-        } catch (Throwable $e) {
-            report($e);
+        $this->emailOwner(
+            $gym,
+            'Tax invoice '.$payment->invoice_number.' from '.config('app.name'),
+            "Thank you for your payment of {$amount}. Your tax invoice {$payment->invoice_number} is attached."
+                .($payment->kind === 'subscription' && $gym->subscription_ends_at ? "\n\nYour plan is active until ".$gym->subscription_ends_at->format('d M Y').'.' : ''),
+            ['type' => 'invoice', 'id' => $payment->id],
+        );
+    }
+
+    public function ownerEmail(Gym $gym): ?string
+    {
+        return $gym->users()->wherePivot('role', 'owner')->first()?->email ?? $gym->email;
+    }
+
+    /** Queues an email to the gym owner (sent by the queue worker, retried on failure). */
+    public function emailOwner(Gym $gym, string $subject, string $body, ?array $attach = null): bool
+    {
+        $to = $this->ownerEmail($gym);
+
+        if (blank($to)) {
+            return false;
         }
+
+        SendPlatformEmail::dispatch($to, $subject, "Hi {$gym->name},\n\n{$body}\n\n".config('app.name'), $attach)->afterCommit();
+
+        return true;
     }
 }

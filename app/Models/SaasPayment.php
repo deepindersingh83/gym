@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** A payment a gym made to the platform (software plan or message credits). */
@@ -24,6 +25,7 @@ class SaasPayment extends Model
             'paid_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',
+            'refunded_amount' => 'decimal:2',
             'invoice' => 'array',
             'period_start' => 'date',
             'period_end' => 'date',
@@ -62,6 +64,17 @@ class SaasPayment extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(SaasCoupon::class, 'saas_coupon_id');
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(SaasRefund::class);
+    }
+
+    /** Amount still refundable (incl. GST). */
+    public function refundable(): float
+    {
+        return round((float) $this->amount - (float) $this->refunded_amount, 2);
     }
 
     public function commission(): HasOne

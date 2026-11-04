@@ -6,6 +6,7 @@ use App\Models\Gym;
 use App\Models\Partner;
 use App\Models\SaasPayment;
 use App\Models\SaasPlan;
+use App\Models\SaasRefund;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -28,10 +29,11 @@ class RevenueReport
     /** What one gym is worth per month, from its last plan payment (discounts included), else its plan's price. */
     public function monthlyValue(Gym $gym): float
     {
-        $last = $gym->saasPayments()->where('kind', 'subscription')->where('amount', '>', 0)->latest('paid_at')->first();
+        $last = $gym->saasPayments()->where('kind', 'subscription')->where('amount', '>', 0)->whereColumn('refunded_amount', '<', 'amount')->latest('paid_at')->first();
 
         if ($last && $last->months) {
-            $net = (float) $last->subtotal > 0 ? (float) $last->subtotal : (float) $last->amount - (float) $last->tax_amount;
+            $net = ((float) $last->subtotal > 0 ? (float) $last->subtotal : (float) $last->amount - (float) $last->tax_amount)
+                * (1 - (float) $last->refunded_amount / (float) $last->amount);
 
             return round($net / $last->months, 2);
         }
@@ -48,14 +50,25 @@ class RevenueReport
         return round($this->payingGyms()->sum(fn (Gym $gym) => $this->monthlyValue($gym)), 2);
     }
 
-    /** Net revenue received in a period (plans and credits). */
+    /** Net revenue received in a period (plans and credits), less refunds made in it. */
     public function revenue(Carbon $from, Carbon $to, ?string $kind = null): float
     {
-        return round((float) $this->payments()
+        $received = $this->payments()
             ->whereBetween('paid_at', [$from, $to])
             ->when($kind, fn ($q) => $q->where('kind', $kind))
             ->get()
-            ->sum(fn (SaasPayment $p) => $this->net($p)), 2);
+            ->sum(fn (SaasPayment $p) => $this->net($p));
+
+        return round($received - $this->refunds($from, $to, $kind), 2);
+    }
+
+    /** Refunds (before GST) made in a period. */
+    public function refunds(Carbon $from, Carbon $to, ?string $kind = null): float
+    {
+        return round((float) SaasRefund::query()->where('currency', $this->currency)
+            ->whereBetween('refunded_at', [$from, $to])
+            ->when($kind, fn ($q) => $q->whereHas('payment', fn ($p) => $p->where('kind', $kind)))
+            ->sum('subtotal'), 2);
     }
 
     /** @return array{labels: list<string>, plans: list<float>, credits: list<float>} last 12 months */
@@ -63,14 +76,16 @@ class RevenueReport
     {
         $start = now()->startOfMonth()->subMonths($months - 1);
         $payments = $this->payments()->where('paid_at', '>=', $start)->get();
+        $refunds = SaasRefund::query()->where('currency', $this->currency)->where('refunded_at', '>=', $start)->with('payment:id,kind')->get();
         $out = ['labels' => [], 'plans' => [], 'credits' => []];
 
         for ($i = 0; $i < $months; $i++) {
             $month = $start->copy()->addMonths($i);
             $in = $payments->filter(fn (SaasPayment $p) => $p->paid_at->isSameMonth($month));
             $out['labels'][] = $month->format('M y');
-            $out['plans'][] = round($in->where('kind', 'subscription')->sum(fn ($p) => $this->net($p)), 2);
-            $out['credits'][] = round($in->where('kind', 'credits')->sum(fn ($p) => $this->net($p)), 2);
+            $back = $refunds->filter(fn (SaasRefund $r) => $r->refunded_at->isSameMonth($month));
+            $out['plans'][] = round($in->where('kind', 'subscription')->sum(fn ($p) => $this->net($p)) - $back->filter(fn ($r) => $r->payment?->kind === 'subscription')->sum('subtotal'), 2);
+            $out['credits'][] = round($in->where('kind', 'credits')->sum(fn ($p) => $this->net($p)) - $back->filter(fn ($r) => $r->payment?->kind === 'credits')->sum('subtotal'), 2);
         }
 
         return $out;

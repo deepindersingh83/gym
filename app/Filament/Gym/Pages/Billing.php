@@ -199,6 +199,23 @@ class Billing extends Page implements HasTable
             });
     }
 
+    public function updateCardAction(): Action
+    {
+        return Action::make('updateCard')
+            ->label('Update card')
+            ->icon(Heroicon::OutlinedCreditCard)
+            ->color('gray')
+            ->visible(fn () => Tenancy::gym()->billing_gateway === 'stripe' && filled(Tenancy::gym()->billing_customer_id))
+            ->action(function () {
+                try {
+                    return redirect()->away(app(BillingCheckout::class)->updateCardUrl(Tenancy::gym()));
+                } catch (Throwable $e) {
+                    report($e);
+                    Notification::make()->title('Could not open the card page')->body('Please try again or contact support.')->danger()->send();
+                }
+            });
+    }
+
     public function cancelAutoRenewAction(): Action
     {
         return Action::make('cancelAutoRenew')
@@ -230,12 +247,16 @@ class Billing extends Page implements HasTable
                 TextColumn::make('kind')->label('For')
                     ->formatStateUsing(fn ($state, SaasPayment $record) => $state === 'credits' ? 'Message credits' : ($record->saasPlan?->name ?? 'Software').' plan'),
                 TextColumn::make('period_end')->label('Covers until')->date('d M Y')->placeholder('—'),
-                TextColumn::make('amount')->formatStateUsing(fn ($state, SaasPayment $record) => Money::format((float) $state, $record->currency)),
+                TextColumn::make('amount')->formatStateUsing(fn ($state, SaasPayment $record) => Money::format((float) $state, $record->currency))
+                    ->description(fn (SaasPayment $record) => (float) $record->refunded_amount > 0 ? 'Refunded '.Money::format((float) $record->refunded_amount, $record->currency) : null),
             ])
             ->recordActions([
                 Action::make('download')->label('PDF')->icon(Heroicon::OutlinedArrowDownTray)
                     ->visible(fn (SaasPayment $record) => filled($record->invoice_number))
                     ->url(fn (SaasPayment $record) => route('saas-invoices.show', $record), shouldOpenInNewTab: true),
+                Action::make('creditNote')->label('Credit note')->icon(Heroicon::OutlinedDocumentMinus)->color('gray')
+                    ->visible(fn (SaasPayment $record) => (float) $record->refunded_amount > 0)
+                    ->url(fn (SaasPayment $record) => ($refund = $record->refunds()->latest('id')->first()) ? route('saas-credit-notes.show', $refund) : null, shouldOpenInNewTab: true),
             ])
             ->emptyStateHeading('No payments yet');
     }
