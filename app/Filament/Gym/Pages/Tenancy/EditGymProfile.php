@@ -149,6 +149,16 @@ class EditGymProfile extends EditTenantProfile
                         ->label('Send reminders by')
                         ->options(MessageChannel::class)
                         ->default(config('gym.defaults.channels')),
+                    Section::make('Win back lapsed members')
+                        ->description('One WhatsApp / SMS offer to members who did not renew, with a link to renew. Members who asked for no offers are skipped.')
+                        ->columns(3)
+                        ->schema([
+                            Toggle::make('settings.win_back_enabled')->label('Send win-back offer')->default(true)->inline(false),
+                            TextInput::make('settings.win_back_after_days')->label('Days after expiry')->numeric()->minValue(1)->maxValue(365)->default(30),
+                            TextInput::make('settings.win_back_offer')->label('Offer')->maxLength(80)->placeholder('your first week back is on us')
+                                ->helperText('Used as {offer}: e.g. "10% off any plan with code COMEBACK".'),
+                        ]),
+                    Text::make('Reminder messages include {renew_link}: a personal link that opens payment (when online payments are on) or your WhatsApp. Edit the wording under Messaging → Message templates.'),
                     Grid::make(3)->schema([
                         Toggle::make('settings.send_birthday_wishes')->label('Birthday wishes')->default(true),
                         Toggle::make('settings.send_anniversary_wishes')->label('Anniversary wishes')->default(true),

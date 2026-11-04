@@ -39,7 +39,7 @@ class SendReminders extends Command
 
     protected function remindGym(Gym $gym, Messenger $messenger): void
     {
-        $counts = array_fill_keys(['renewal', 'expired', 'dues', 'birthday', 'anniversary'], 0);
+        $counts = array_fill_keys(['renewal', 'expired', 'win-back', 'dues', 'birthday', 'anniversary'], 0);
         $today = today();
 
         // Upcoming renewals, e.g. 7, 3 and 1 day before the end date.
@@ -60,6 +60,19 @@ class SendReminders extends Command
             ->each(function (Subscription $s) use ($messenger, &$counts) {
                 $counts['expired'] += $messenger->send($s->member, MessageEvent::Expired, subscription: $s, dedupeKey: "expired:{$s->id}");
             });
+
+        // Win-back: one offer to members whose membership lapsed N days ago and who have not come back.
+        if ($gym->setting('win_back_enabled')) {
+            $after = max(1, (int) $gym->setting('win_back_after_days'));
+
+            Subscription::query()->where('status', SubscriptionStatus::Expired)->whereDate('end_date', $today->copy()->subDays($after))
+                ->whereHas('member', fn ($q) => $q->where('marketing_opt_out', false)->whereNull('erased_at'))
+                ->with(['member.user', 'member.gym', 'plan'])->get()
+                ->reject(fn (Subscription $s) => $this->hasLaterMembership($s))
+                ->each(function (Subscription $s) use ($messenger, &$counts) {
+                    $counts['win-back'] += $messenger->send($s->member, MessageEvent::WinBack, subscription: $s, dedupeKey: "winback:{$s->id}");
+                });
+        }
 
         // Pending dues, repeated every N days.
         $every = max(1, (int) $gym->setting('dues_reminder_every_days'));

@@ -16,6 +16,7 @@ enum MessageEvent: string implements HasLabel
     case LoginCode = 'login_code';
     case AppInvite = 'app_invite';
     case Broadcast = 'broadcast';
+    case WinBack = 'win_back';
 
     public function getLabel(): string
     {
@@ -30,6 +31,7 @@ enum MessageEvent: string implements HasLabel
             self::LoginCode => 'Member app login code',
             self::AppInvite => 'Member app invite',
             self::Broadcast => 'Broadcast',
+            self::WinBack => 'Win-back offer',
         };
     }
 
@@ -37,8 +39,8 @@ enum MessageEvent: string implements HasLabel
     public function defaultBody(): string
     {
         return match ($this) {
-            self::RenewalReminder => 'Hi {name}, your {plan} membership at {gym} ends on {end_date}. Renew now to keep training without a break.',
-            self::Expired => 'Hi {name}, your {plan} membership at {gym} expired on {end_date}. Visit the front desk or renew online to continue.',
+            self::RenewalReminder => 'Hi {name}, your {plan} membership at {gym} ends on {end_date}. Renew now to keep training without a break: {renew_link}',
+            self::Expired => 'Hi {name}, your {plan} membership at {gym} expired on {end_date}. Renew here to continue: {renew_link}',
             self::DuesReminder => 'Hi {name}, you have a pending balance of {currency}{due} at {gym}. Please clear it at your next visit.',
             self::Birthday => 'Happy birthday {name}! Wishing you a strong and healthy year ahead. - Team {gym}',
             self::Anniversary => 'Happy anniversary {name}! Best wishes from all of us at {gym}.',
@@ -47,6 +49,7 @@ enum MessageEvent: string implements HasLabel
             self::LoginCode => '{code} is your {gym} login code. It expires in 10 minutes. Do not share it with anyone.',
             self::AppInvite => 'Hi {name}, your {gym} member app is ready: see your membership, payments, receipts and progress. Open {app_url} and sign in with your mobile number and a one-time code.',
             self::Broadcast => '{message}',
+            self::WinBack => 'Hi {name}, we miss you at {gym}! Come back this week: {offer}. Renew here: {renew_link}',
         };
     }
 }

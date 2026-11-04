@@ -41,6 +41,9 @@ return [
         'review_request_enabled' => false,
         'review_request_after_visits' => 10,
         'google_review_url' => null,
+        'win_back_enabled' => true,
+        'win_back_after_days' => 30,
+        'win_back_offer' => null,
     ],
 
     'whatsapp' => [

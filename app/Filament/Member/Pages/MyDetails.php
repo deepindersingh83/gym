@@ -16,6 +16,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -73,7 +74,7 @@ class MyDetails extends Page
     public const EDITABLE = [
         'photo_path', 'date_of_birth', 'anniversary_date', 'address', 'occupation', 'blood_group',
         'emergency_contact_name', 'emergency_contact_phone', 'height_cm', 'goal', 'target_weight_kg',
-        'health_questionnaire', 'medical_conditions',
+        'health_questionnaire', 'medical_conditions', 'marketing_opt_out',
     ];
 
     public ?array $data = [];
@@ -139,6 +140,11 @@ class MyDetails extends Page
                             ->columnSpanFull(),
                         Textarea::make('medical_conditions')->label('Injuries or anything else we should know')->rows(2)->maxLength(1000)->columnSpanFull(),
                     ]),
+                Section::make('Messages')->schema([
+                    Toggle::make('marketing_opt_out')
+                        ->label('No offers or announcements, please')
+                        ->helperText('You will still get renewal reminders, receipts and login codes.'),
+                ]),
             ]);
     }
 

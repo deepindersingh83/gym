@@ -145,6 +145,7 @@ class MemberResource extends Resource
                 Select::make('source')->options(['walk_in' => 'Walk-in', 'online' => 'Online signup', 'referral' => 'Referral', 'social' => 'Social media', 'other' => 'Other'])->default('walk_in'),
                 Toggle::make('is_active')->label('Active')->default(true)->inline(false),
                 Textarea::make('notes')->rows(2)->columnSpanFull(),
+                Toggle::make('marketing_opt_out')->label('No offers or broadcasts')->helperText('Renewal reminders and receipts still go out.')->inline(false),
                 Checkbox::make('consent')
                     ->label('Member agreed to the gym storing their details, photo and health information')
                     ->helperText(fn (?Member $record) => $record?->consented_at ? 'Agreed on '.$record->consented_at->format('d M Y').' ('.str_replace('_', ' ', (string) $record->consent_source).').' : 'Ask the member before saving their details.')

@@ -14,6 +14,7 @@ use App\Models\MessageTemplate;
 use App\Models\Subscription;
 use App\Services\Credits;
 use App\Support\Money;
+use App\Support\RenewLink;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -106,6 +107,8 @@ class Messenger
             ->where('gym_id', $broadcast->gym_id)
             ->whereNull('deleted_at')
             ->where('is_active', true)
+            ->where('marketing_opt_out', false)
+            ->whereNull('erased_at')
             ->when($broadcast->branch_id, fn ($q, $id) => $q->where('branch_id', $id))
             ->when($broadcast->audience === 'active', fn ($q) => $q->whereHas('subscriptions', $activeNow))
             ->when($broadcast->audience === 'expired', fn ($q) => $q->whereHas('subscriptions')->whereDoesntHave('subscriptions', $activeNow));
@@ -141,6 +144,8 @@ class Messenger
             'days_left' => (string) ($subscription?->days_left ?? ''),
             'due' => number_format($subscription?->balance_due ?? $member->balance_due, 2),
             'review_link' => (string) $gym->setting('google_review_url'),
+            'renew_link' => RenewLink::for($member),
+            'offer' => (string) ($gym->setting('win_back_offer') ?: 'your first week back is on us'),
         ];
     }
 
