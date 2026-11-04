@@ -16,6 +16,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -30,6 +31,7 @@ use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -149,6 +151,14 @@ class EditGymProfile extends EditTenantProfile
                         ->label('Send reminders by')
                         ->options(MessageChannel::class)
                         ->default(config('gym.defaults.channels')),
+                    Section::make('Daily summary for the owner')
+                        ->description("An email each evening with the day's collections, new members, check-ins and enquiries.")
+                        ->columns(3)
+                        ->schema([
+                            Toggle::make('settings.daily_summary_enabled')->label('Send daily summary')->default(true)->inline(false),
+                            Select::make('settings.daily_summary_hour')->label('Send at')->default(21)
+                                ->options(collect(range(17, 23))->mapWithKeys(fn ($h) => [$h => Carbon::createFromTime($h)->format('g A')])->all()),
+                        ]),
                     Section::make('Win back lapsed members')
                         ->description('One WhatsApp / SMS offer to members who did not renew, with a link to renew. Members who asked for no offers are skipped.')
                         ->columns(3)

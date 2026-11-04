@@ -44,6 +44,8 @@ return [
         'win_back_enabled' => true,
         'win_back_after_days' => 30,
         'win_back_offer' => null,
+        'daily_summary_enabled' => true,
+        'daily_summary_hour' => 21,
     ],
 
     'whatsapp' => [
