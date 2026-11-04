@@ -1,11 +1,33 @@
 <x-filament-panels::page>
     <x-filament::section heading="Download everything" icon="heroicon-o-arrow-down-tray">
         <p style="font-size: .9rem; margin-bottom: 1rem">
-            One ZIP file with a spreadsheet (CSV) for each part of your gym: members, memberships, payments, check-ins,
+            We prepare one ZIP file with a spreadsheet (CSV) for each part of your gym: members, memberships, payments, check-ins,
             measurements, enquiries, expenses, staff and messages, plus member photos and website images.
-            You own this data and can take it with you at any time.
+            You own this data and can take it with you at any time. Large gyms can take a few minutes; we email you the link.
         </p>
         {{ $this->downloadAction }}
+
+        @if ($exports->isNotEmpty())
+            <table style="width: 100%; font-size: .875rem; margin-top: 1rem; border-collapse: collapse">
+                @foreach ($exports as $export)
+                    <tr style="border-top: 1px solid rgba(127,127,127,.18)">
+                        <td style="padding: .45rem 0">{{ $export->created_at->format('d M Y, h:i A') }}</td>
+                        <td>
+                            @if ($export->isReady())
+                                <a href="{{ $export->downloadUrl() }}" style="text-decoration: underline">Download ({{ number_format($export->size / 1048576, 1) }} MB)</a>
+                                <span style="opacity: .6">· until {{ $export->expires_at->format('d M Y') }}</span>
+                            @elseif ($export->status === 'pending')
+                                <span style="opacity: .7">Preparing… refresh in a minute</span>
+                            @elseif ($export->status === 'failed')
+                                <span style="color: rgb(220 38 38)">Failed. Please try again or contact support.</span>
+                            @else
+                                <span style="opacity: .6">Expired</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </table>
+        @endif
     </x-filament::section>
 
     <x-filament::section heading="Members' privacy" icon="heroicon-o-shield-check">

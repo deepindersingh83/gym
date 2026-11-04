@@ -97,6 +97,13 @@ class Settings extends Page
                         Text::make('Shown on the tax invoices gyms receive from you. Gyms are billed by the entity of their country.'),
                         Section::make('India')->columns(2)->schema($this->entityFields('IN', 'GSTIN', '15 characters. Leave empty if not GST registered.')),
                         Section::make('Australia')->columns(2)->schema($this->entityFields('AU', 'ABN', '11 digits.')),
+                        Section::make('Privacy contacts')
+                            ->description(fn () => 'Shown on '.route('legal.privacy').', '.route('legal.terms').' and each gym\'s privacy notice.')
+                            ->columns(3)->schema([
+                                TextInput::make('gym.legal.privacy_email')->label('Privacy / grievance email')->email()->helperText('Empty: the support email is used.'),
+                                TextInput::make('gym.legal.grievance_officer')->label('Grievance officer (India)')->maxLength(100)->helperText('Name required by the DPDP Act.'),
+                                TextInput::make('gym.legal.updated_on')->label('Policy last updated')->placeholder('4 November 2026')->maxLength(40),
+                            ]),
                         Section::make('Renewals')->columns(2)->schema([
                             TagsInput::make('gym.billing.reminder_days')->label('Remind gyms this many days before their plan ends')->placeholder('e.g. 7'),
                             TextInput::make('gym.billing.grace_days')->label('Grace period after the end date (days)')->numeric()->minValue(0)->maxValue(30)

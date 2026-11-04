@@ -483,6 +483,8 @@
                 <a href="{{ $memberLogin }}">Member login</a>
                 <a href="{{ $register }}">Create a gym</a>
                 <a href="{{ route('filament.partner.auth.login') }}">Partner login</a>
+                <a href="{{ route('legal.privacy') }}">Privacy</a>
+                <a href="{{ route('legal.terms') }}">Terms</a>
             </nav>
         </div>
     </footer>

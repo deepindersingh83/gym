@@ -155,7 +155,7 @@
 
                 <label class="check" style="margin-top: 16px">
                     <input type="checkbox" name="consent" value="1" required>
-                    I agree that {{ $gym->name }} may store my details, photo and health information to manage my membership and contact me about it.
+                    I agree that {{ $gym->name }} may store my details, photo and health information to manage my membership and contact me about it, as explained in its <a href="{{ route('legal.gym-privacy', $gym) }}" target="_blank" style="text-decoration: underline">privacy notice</a>.
                 </label>
                 @error('consent')<div class="error">{{ $message }}</div>@enderror
 

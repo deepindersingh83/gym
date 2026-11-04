@@ -52,8 +52,28 @@ class DataComplianceTest extends TestCase
         $zip->close();
         unlink($path);
 
+        // The ZIP is prepared by the queue worker and the link emailed (sync queue in tests).
+        config(['mail.default' => 'array']);
+        Storage::fake('local');
         $this->inGymPanel($gym, $this->ownerOf($gym));
-        Livewire::test(YourData::class)->callAction('download')->assertFileDownloaded();
+        Livewire::test(YourData::class)->callAction('download')->assertNotified('Preparing your download');
+
+        $export = \App\Models\GymDataExport::query()->sole();
+        $this->assertSame('ready', $export->status);
+        Storage::disk('local')->assertExists($export->path);
+        $mail = collect(app('mailer')->getSymfonyTransport()->messages()->all())->last()->getOriginalMessage();
+        $this->assertStringContainsString('is ready', $mail->getSubject());
+        $this->assertStringContainsString('/data-exports/'.$export->id, $mail->getTextBody());
+
+        $this->get($export->downloadUrl())->assertOk()->assertDownload();
+        $this->get(route('data-exports.download', $export))->assertForbidden(); // unsigned link
+        $this->actingAs($this->addStaff($gym, StaffRole::Trainer))->get($export->downloadUrl())->assertForbidden();
+
+        $this->travel(8)->days();
+        $this->actingAs($this->ownerOf($gym))->get($export->downloadUrl())->assertForbidden(); // signature expired
+        $this->artisan('gym:purge-closed')->expectsOutput('Removed 1 expired data download.')->assertSuccessful();
+        Storage::disk('local')->assertMissing($export->path);
+        $this->travelBack();
 
         $this->inGymPanel($gym, $this->addStaff($gym, StaffRole::Manager));
         $this->get(YourData::getUrl(tenant: $gym))->assertForbidden();

@@ -265,15 +265,14 @@ class GymResource extends Resource
                             Notification::make()->title("Password updated for {$owner->email}")->success()->send();
                         }),
                     Action::make('exportData')
-                        ->label('Export all data (ZIP)')
+                        ->label('Export all data (emailed ZIP)')
                         ->icon(Heroicon::OutlinedArrowDownTray)
                         ->color('gray')
                         ->visible(fn () => AdminAccess::can('gyms.export'))
                         ->action(function (Gym $record) {
-                            $export = app(GymDataExport::class);
+                            app(GymDataExport::class)->request($record, auth()->user());
                             AdminLog::record('Exported gym data', $record);
-
-                            return response()->download($export->build($record), $export->filename($record))->deleteFileAfterSend();
+                            Notification::make()->title('Preparing the export')->body('A download link will be emailed to '.auth()->user()->email.'.')->success()->send();
                         }),
                     Action::make('suspend')
                         ->label('Suspend')

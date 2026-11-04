@@ -1,16 +1,21 @@
 <?php
 
 use App\Http\Controllers\BranchSwitchController;
+use App\Http\Controllers\DataExportController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\GymWebsiteController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LeadWebhookController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PlatformWebhookController;
 use App\Http\Controllers\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/terms', [LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/gym/{gym:slug}/privacy', [LegalController::class, 'gymPrivacy'])->name('legal.gym-privacy');
 
 // Each gym's public website, with free-trial booking.
 Route::get('/gym/{gym:slug}', [GymWebsiteController::class, 'show'])->name('website.show');
@@ -34,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoices/{subscription}', [DocumentController::class, 'invoice'])->name('invoices.show');
     Route::get('/receipts/{payment}', [DocumentController::class, 'receipt'])->name('receipts.show');
     Route::get('/billing/invoices/{saasPayment}', [DocumentController::class, 'saasInvoice'])->name('saas-invoices.show');
+    Route::get('/data-exports/{export}', DataExportController::class)->middleware('signed')->name('data-exports.download');
     Route::get('/billing/credit-notes/{saasRefund}', [DocumentController::class, 'saasCreditNote'])->name('saas-credit-notes.show');
     Route::post('/branch-switch', BranchSwitchController::class)->name('branch.select');
 });

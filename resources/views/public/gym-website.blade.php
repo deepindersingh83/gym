@@ -412,6 +412,7 @@
                 <div style="margin-top: 6px">
                     @foreach ($socials as $key => $label)<a href="{{ $gym->websiteSetting($key) }}" target="_blank" rel="noopener">{{ $label }}</a>@endforeach
                     <a href="{{ route('filament.member.auth.login', absolute: false) }}">Member login</a>
+                    <a href="{{ route('legal.gym-privacy', $gym, absolute: false) }}">Privacy</a>
                 </div>
             </div>
             <div>Powered by <a href="{{ route('home') }}" style="margin: 0">{{ config('app.name') }}</a></div>

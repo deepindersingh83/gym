@@ -99,7 +99,7 @@ class AustraliaTest extends TestCase
         Filament::setCurrentPanel('gym');
 
         Livewire::test(RegisterGym::class)
-            ->fillForm(['name' => 'Perth Power', 'phone' => '0400000000', 'country' => 'AU', 'timezone' => 'Australia/Perth', 'abn' => '51 824 753 556', 'gst_registered' => true, 'starter_plans' => ['monthly']])
+            ->fillForm(['name' => 'Perth Power', 'phone' => '0400000000', 'country' => 'AU', 'timezone' => 'Australia/Perth', 'abn' => '51 824 753 556', 'gst_registered' => true, 'starter_plans' => ['monthly'], 'accept_terms' => true])
             ->call('register')
             ->assertHasNoFormErrors();
 

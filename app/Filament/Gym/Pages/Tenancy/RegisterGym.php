@@ -7,6 +7,7 @@ use App\Filament\Gym\Schemas\GymDetailsFields;
 use App\Http\Middleware\CaptureReferral;
 use App\Models\Gym;
 use App\Services\GymProvisioner;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Components\Wizard;
@@ -43,6 +44,11 @@ class RegisterGym extends RegisterTenant
                         ])
                         ->default([PlanType::Monthly->value, PlanType::Quarterly->value, PlanType::Yearly->value])
                         ->helperText('You can change prices later under Plans.')
+                        ->dehydrated(false),
+                    Checkbox::make('accept_terms')
+                        ->label(new HtmlString('I agree to the <a href="'.e(route('legal.terms')).'" target="_blank" style="text-decoration:underline">terms of service</a> and <a href="'.e(route('legal.privacy')).'" target="_blank" style="text-decoration:underline">privacy policy</a>'))
+                        ->accepted()
+                        ->validationMessages(['accepted' => 'Please accept the terms to create your gym.'])
                         ->dehydrated(false),
                 ]),
             ])->submitAction(new HtmlString(Blade::render('<x-filament::button type="submit">Create my gym</x-filament::button>'))),

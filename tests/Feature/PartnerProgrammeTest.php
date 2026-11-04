@@ -60,7 +60,7 @@ class PartnerProgrammeTest extends TestCase
         Filament::setCurrentPanel('gym');
 
         Livewire::withCookies([CaptureReferral::COOKIE => $partner->code])->test(RegisterGym::class)
-            ->fillForm(['name' => 'Referred Gym', 'phone' => '9000000000'])
+            ->fillForm(['name' => 'Referred Gym', 'phone' => '9000000000', 'accept_terms' => true])
             ->call('register')
             ->assertHasNoFormErrors();
 

@@ -154,7 +154,7 @@ class GymPanelTest extends TestCase
 
         Filament::setCurrentPanel('gym');
         Livewire::test(RegisterGym::class)
-            ->fillForm(['name' => 'Muscle Factory', 'phone' => '9888877777', 'starter_plans' => ['monthly', 'yearly']])
+            ->fillForm(['name' => 'Muscle Factory', 'phone' => '9888877777', 'starter_plans' => ['monthly', 'yearly'], 'accept_terms' => true])
             ->call('register')
             ->assertHasNoFormErrors();
 

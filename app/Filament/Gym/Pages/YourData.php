@@ -39,15 +39,24 @@ class YourData extends Page
     public function downloadAction(): Action
     {
         return Action::make('download')
-            ->label('Download all data (ZIP)')
+            ->label('Prepare download (ZIP)')
             ->icon(Heroicon::OutlinedArrowDownTray)
             ->action(function () {
                 $gym = Tenancy::gym();
-                $export = app(GymDataExport::class);
-                activity()->causedBy(auth()->user())->performedOn($gym)->tap(fn ($a) => $a->gym_id = $gym->id)->log('Downloaded all gym data');
+                app(GymDataExport::class)->request($gym, auth()->user());
+                activity()->causedBy(auth()->user())->performedOn($gym)->tap(fn ($a) => $a->gym_id = $gym->id)->log('Asked for a download of all gym data');
 
-                return response()->download($export->build($gym), $export->filename($gym))->deleteFileAfterSend();
+                Notification::make()->title('Preparing your download')
+                    ->body('We will email '.auth()->user()->email.' a link when it is ready, usually within a few minutes. It also appears on this page.')
+                    ->success()->send();
             });
+    }
+
+    protected function getViewData(): array
+    {
+        return [
+            'exports' => \App\Models\GymDataExport::query()->where('gym_id', Tenancy::gymId())->latest('id')->limit(5)->get(),
+        ];
     }
 
     public function closeAction(): Action

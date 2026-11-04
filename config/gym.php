@@ -133,6 +133,13 @@ return [
         ],
     ],
 
+    // Shown on /privacy, /terms and gyms' privacy notices.
+    'legal' => [
+        'privacy_email' => env('PRIVACY_EMAIL'),
+        'grievance_officer' => env('GRIEVANCE_OFFICER'), // India DPDP Act: name of the person who handles complaints
+        'updated_on' => null,
+    ],
+
     // Platform admin team.
     'admin' => [
         'require_two_factor' => (bool) env('ADMIN_REQUIRE_2FA', true),

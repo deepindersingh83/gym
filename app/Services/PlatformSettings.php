@@ -20,6 +20,9 @@ class PlatformSettings
         'gym.trial_days' => false,
         'gym.default_saas_plan' => false,
         'gym.support.email' => false,
+        'gym.legal.privacy_email' => false,
+        'gym.legal.grievance_officer' => false,
+        'gym.legal.updated_on' => false,
         'gym.support.phone' => false,
 
         'gym.billing.grace_days' => false,

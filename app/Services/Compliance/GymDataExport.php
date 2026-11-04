@@ -2,7 +2,9 @@
 
 namespace App\Services\Compliance;
 
+use App\Jobs\BuildGymDataExport;
 use App\Models\Gym;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -38,6 +40,36 @@ class GymDataExport
 
     /** Gym columns left out: secrets and internal ids. */
     protected const GYM_HIDDEN = ['integrations', 'lead_webhook_token', 'cloudflare_hostname_id', 'billing_subscription_id'];
+
+    /** Queues a ZIP for this person; a request already being prepared is reused. */
+    public function request(Gym $gym, User $user): \App\Models\GymDataExport
+    {
+        $pending = \App\Models\GymDataExport::query()->where('gym_id', $gym->id)->where('status', 'pending')->where('created_at', '>', now()->subHour())->first();
+
+        if ($pending) {
+            return $pending;
+        }
+
+        $export = \App\Models\GymDataExport::create(['gym_id' => $gym->id, 'user_id' => $user->id]);
+        BuildGymDataExport::dispatch($export->id)->afterCommit();
+
+        return $export->refresh();
+    }
+
+    /** Removes downloads older than 7 days. */
+    public function pruneExpired(): int
+    {
+        $expired = \App\Models\GymDataExport::query()->where(fn ($q) => $q->where('expires_at', '<', now())->orWhere(fn ($q) => $q->where('status', 'failed')->where('created_at', '<', now()->subDays(\App\Models\GymDataExport::KEEP_DAYS))))->get();
+
+        foreach ($expired as $export) {
+            if ($export->path) {
+                Storage::disk('local')->delete($export->path);
+            }
+            $export->delete();
+        }
+
+        return $expired->count();
+    }
 
     /** @return string path of a temporary ZIP file; delete it after sending */
     public function build(Gym $gym): string
